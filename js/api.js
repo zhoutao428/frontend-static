@@ -4,7 +4,7 @@
 // 1. 地址配置
 // ==========================================
 // const PYTHON_BACKEND = 'http://localhost:8000'; // 已弃用
-const NEXTJS_BACKEND = window.API_BASE_URL || 'http://localhost:3001/api';
+const NEXTJS_BACKEND = 'https://public-4xop.vercel.app/api';
 
 // ==========================================
 // 2. 核心请求工具 (只保留 Next.js 的)
@@ -147,5 +147,6 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI, alchemyAPI,
     post, get
 };
+
 
 
