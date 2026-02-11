@@ -162,7 +162,7 @@ async function initModelSelector() {
 
 async function checkSystemAnnouncement() {
     try {
-        const response = await fetch('api/system/announcement')
+        const response = await fetch('https://public-4xop.vercel.app/api/system/announcement')
         if (!response.ok) return;
         const data = await response.json();
         if (data && data.content) showAnnouncementBar(data.content, data.type);
