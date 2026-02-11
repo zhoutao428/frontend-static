@@ -1,9 +1,8 @@
 // frontend/js/api.js (主页修复版 - Mock Mode)
 
 // ==========================================
-// 1. 地址配置
-// ==========================================
-// const PYTHON_BACKEND = 'http://localhost:8000'; // 已弃用
+window.API_BASE_URL = 'https://public-4xop.vercel.app/api';
+delete window.API_BASE_URL;
 const NEXTJS_BACKEND = 'https://public-4xop.vercel.app/api';
 
 // ==========================================
@@ -147,6 +146,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI, alchemyAPI,
     post, get
 };
+
 
 
 
