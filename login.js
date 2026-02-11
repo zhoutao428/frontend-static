@@ -45,7 +45,7 @@ async function handleLogin(event) {
         // 3. ⚠️ 新增：通知后台(3001)种 Cookie
         // 这一步是为了让后续调用 /api/chat 不会报 401
         try {
-            await fetch('http://localhost:3001/api/auth/cookie', {
+            await fetch('https://public-4xop.vercel.app/api/auth/cookie', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include', // 关键！允许跨域写 Cookie
@@ -181,3 +181,4 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.ctrlKey && e.key === 'r') { e.preventDefault(); switchTab('register'); }
     });
 });
+
