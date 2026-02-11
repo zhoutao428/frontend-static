@@ -1,0 +1,577 @@
+/* css/style.css - Cleaned & Fixed */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { 
+    font-family: 'Inter', sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* === 顶部控制栏 === */
+.test-header {
+    height: 60px;
+    background: rgba(30, 41, 59, 0.95);
+    border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+}
+
+.test-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #818cf8;
+}
+
+.test-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.test-controls button {
+    padding: 6px 12px;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    border-radius: 6px;
+    color: #c7d2fe;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.test-controls button:hover {
+    background: rgba(99, 102, 241, 0.3);
+    transform: translateY(-1px);
+}
+
+/* === 主容器布局 === */
+.factory-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch; /* 确保子元素高度拉伸 */
+    height: calc(100vh - 60px - 60px); 
+    margin-top: 60px;
+    overflow: hidden;
+}
+
+/* 通用面板样式 */
+.panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    position: relative; /* 稳固定位 */
+}
+
+.panel-header {
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0; /* 头部不可压缩 */
+}
+
+.panel-header h3 {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    margin: 0;
+}
+
+.panel-tools, .workflow-tools {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-icon {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+/* === 左侧：角色零件库 === */
+.library-panel {
+    width: 30%;
+    border-right: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* 分类树 */
+.category-tree {
+    height: 200px;
+    min-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+/* 零件网格容器 */
+.parts-grid-container {
+    flex: 1; /* 占满剩余高度 */
+    overflow-y: auto;
+    position: relative;
+    min-height: 0; /* 防止Flex子项溢出 */
+}
+
+.parts-grid {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.part-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: grab;
+    user-select: none;
+    position: relative;
+    /* 防止内容撑破 */
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow: hidden; 
+}
+
+.part-card:hover {
+    border-color: #818cf8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.part-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+
+.part-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+
+.part-name { font-weight: 500; font-size: 14px; }
+
+.part-tags {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;
+}
+
+.tag {
+    background: rgba(99, 102, 241, 0.15); color: #a5b4fc;
+    padding: 2px 6px; border-radius: 10px; font-size: 11px;
+}
+
+/* API配置状态图标 */
+.api-status {
+    margin-left: auto; width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-size: 12px; transition: all 0.2s;
+}
+.api-status.has-api { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.api-status.no-api { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+/* 悬停显示配置按钮 */
+.part-actions {
+    display: none; position: absolute; top: 10px; right: 10px; gap: 5px;
+}
+.part-card:hover .part-actions { display: flex; }
+
+.btn-api-config {
+    background: rgba(99, 102, 241, 0.3); border: 1px solid rgba(99, 102, 241, 0.5);
+    color: #a5b4fc; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;
+}
+/* === 中间：工作流组装台 === */
+.builder-panel {
+  flex:  0 0 40%;
+  margin: 0 auto; /* 居中 
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 400px; /* 最小宽度，防止被过度挤压 */
+  max-width: 40%; /* 最大宽度，防止过度扩张 */
+}
+
+/* 2. 工作流区域 (上半部分) */
+.groups-container {
+  flex: 1; /* 占据面板的主要空间 */
+  overflow-y: auto;
+  padding: 15px;
+  padding-bottom: 140px; /* 为炼丹炉留出空间 */
+  width: 100%;
+  box-sizing: border-box; /* 确保padding包含在宽度内 */
+}
+
+.build-group {
+  background: rgba(30, 41, 59, 0.4);
+  border: 2px dashed #475569;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  min-height: 100px;
+  transition: all 0.3s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.build-group.drag-over {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+}
+
+.group-name-input {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 600;
+  width: 70%;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.group-name-input:focus {
+  outline: none;
+  border-bottom-color: #818cf8;
+  background: rgba(129, 140, 248, 0.05);
+}
+
+.group-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 60px;
+  width: 100%;
+}
+
+.role-in-group {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  max-width: 100%;
+}
+
+.model-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #3b82f6;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+/* === 炼丹炉 (Fixed Footer) === */
+.drop-hint {
+    /* 固定在屏幕底部，脱离文档流 */
+    position: fixed; 
+    bottom: 20px;
+    /* 居中定位 */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    /* 尺寸和样式 */
+    width: 600px; /* 或者 40% */
+    height: 120px;
+    max-width: 90%;
+    
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border: 2px dashed #475569;
+    border-radius: 16px;
+    z-index: 2000; /* 确保在最上层 */
+    
+    /* 内容居中 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: all 0.3s;
+}
+
+/* 拖拽悬停效果 */
+.drop-hint.drag-over {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+    transform: translateX(-50%) scale(1.05); /* 放大一点 */
+}
+
+/* 确保中间内容区底部留白，不被炼丹炉挡住 */
+.groups-container {
+    padding-bottom: 160px !important; 
+}
+
+/* === 右侧：AI引擎库 === */
+.ai-panel {
+    width: 30%;
+    border-left: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.ai-categories {
+    flex: 1; overflow-y: auto; padding: 10px; min-height: 0;
+}
+
+.ai-category { margin-bottom: 15px; }
+
+.ai-category-header {
+    padding: 10px; background: rgba(30, 41, 59, 0.6); border-radius: 8px;
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
+.ai-category.expanded i.fa-chevron-right { transform: rotate(90deg); }
+
+.ai-models {
+    padding: 10px 0 10px 20px; display: flex; flex-direction: column; gap: 8px;
+}
+
+.ai-model-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px; padding: 12px; cursor: grab;
+    display: flex; align-items: center; gap: 12px;
+}
+
+.model-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; color: white;
+}
+
+.model-info { flex: 1; min-width: 0; }
+.model-name { font-weight: 600; font-size: 13px; }
+.model-provider { font-size: 11px; color: #94a3b8; }
+/* 绑定面板 (右侧底部) */
+.binding-panel {
+    padding: 15px; border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0; min-height: 150px; max-height: 300px;
+    display: flex; flex-direction: column;
+}
+.binding-list { flex: 1; overflow-y: auto; margin-bottom: 15px; min-height: 0; }
+.binding-item {
+    background: rgba(30, 41, 59, 0.4); padding: 8px; border-radius: 6px;
+    margin-bottom: 6px; display: flex; justify-content: space-between; font-size: 12px;
+}
+
+/* === 模态框 === */
+.modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    display: none; align-items: center; justify-content: center; z-index: 2000;
+}
+.modal-content {
+    background: #1e293b; border: 1px solid #475569; border-radius: 12px;
+    width: 500px; max-width: 90%; max-height: 90vh;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-header { padding: 20px; border-bottom: 1px solid #475569; display: flex; justify-content: space-between; }
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+.modal-footer { padding: 15px 20px; border-top: 1px solid #475569; display: flex; justify-content: flex-end; gap: 10px; }
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 8px 12px; background: #0f172a;
+    border: 1px solid #475569; border-radius: 6px; color: #e2e8f0;
+}
+
+/* === 滚动条美化 === */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.6); }
+
+/* === 霓虹按钮 === */
+.btn-primary-glow {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none; border-radius: 8px; padding: 8px 16px;
+    color: white; font-weight: 600; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary-glow:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6); }
+
+/* 工具类 */
+.hidden { display: none !important; }
+/* === 运行控制面板 (底部固定) === */
+.run-control-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 0 20px;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.run-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.btn-run-primary {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white; border: none; padding: 8px 16px; border-radius: 6px;
+    cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;
+}
+.btn-run-secondary {
+    background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.5);
+    color: #c7d2fe; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+}
+.btn-run-stop {
+    background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+}
+
+.run-status {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 15px; min-width: 300px;
+}
+.progress-bar {
+    flex: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;
+}
+.progress-fill {
+    height: 100%; background: linear-gradient(90deg, #10b981, #3b82f6); width: 0%; transition: width 0.3s;
+}
+
+/* === 执行结果面板 (右侧浮动) === */
+.results-panel {
+    position: fixed;
+    right: 0;
+    top: 60px;
+    bottom: 60px; /* 留出底部运行栏空间 */
+    width: 400px;
+    background: rgba(15, 23, 42, 0.95);
+    border-left: 1px solid rgba(99, 102, 241, 0.3);
+    display: none; /* 默认隐藏 */
+    flex-direction: column;
+    z-index: 998;
+    box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+}
+.results-header {
+    padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.results-content {
+    flex: 1; overflow-y: auto; padding: 15px;
+}
+.result-item {
+    background: rgba(30, 41, 59, 0.6); border-radius: 8px; padding: 12px; margin-bottom: 10px;
+    border-left: 4px solid #10b981;
+}
+.result-item.header {
+    background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-weight: bold; border-left: none;
+}
+/* === 悬浮调试球 (Debug Float) === */
+.debug-float-container {
+    position: fixed;
+    bottom: 80px; /* 避开底部运行栏 */
+    right: 30px;
+    z-index: 10000;
+}
+
+.debug-handle {
+    width: 50px; height: 50px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: move;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: transform 0.2s;
+}
+.debug-handle:hover { transform: scale(1.1); }
+.debug-handle i { font-size: 22px; color: white; }
+
+.debug-badge {
+    position: absolute; top: -5px; right: -5px;
+    background: #ef4444; color: white;
+    font-size: 10px; min-width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #0f172a;
+}
+.debug-badge:empty { display: none; }
+
+/* 调试面板 */
+.debug-panel {
+    position: absolute; bottom: 60px; right: 0;
+    width: 400px; height: 300px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    visibility: hidden; opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s;
+}
+.debug-float-container.pinned .debug-panel,
+.debug-float-container:hover .debug-panel {
+    visibility: visible; opacity: 1; transform: translateY(0);
+}
+
+.debug-header {
+    padding: 10px 15px; background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.debug-body { flex: 1; overflow: hidden; position: relative; }
+.debug-log {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    overflow-y: auto; padding: 10px;
+    font-family: monospace; font-size: 12px; color: #cbd5e1;
+}
+.debug-log div { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
+
+/* 调试按钮 */
+.debug-controls { display: flex; gap: 5px; }
+.debug-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: #94a3b8; width: 24px; height: 24px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.debug-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+.debug-pin.pinned { background: rgba(99, 102, 241, 0.3); color: #a5b4fc; border-color: #818cf8; }
+#groups-container.drag-over-stage {
+    box-shadow: inset 0 0 50px rgba(251, 191, 36, 0.2);
+    border: 2px dashed #fbbf24;
+    transition: all 0.3s;
+}
