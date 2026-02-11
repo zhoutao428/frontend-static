@@ -97,7 +97,7 @@ async function updateUserInfo() {
                         // 🚨 注意：这里还是硬编码的 localhost:3001
                         // 上线后需要改为相对路径或你的域名
                         // window.location.href = 'http://localhost:3001/login'; 
-                        window.location.href = '/login';  // 建议改为这个
+                        window.location.href = 'https://zhoutao428.github.io/frontend-static/login.html';
                     }
                 };
             }
