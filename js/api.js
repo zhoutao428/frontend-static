@@ -1,9 +1,9 @@
 // frontend/js/api.js (主页修复版 - Mock Mode)
 
 // ==========================================
-window.API_BASE_URL = 'https://0o0o0.shop/api';
+window.API_BASE_URL = 'https://public-virid-chi.vercel.app/api';
 delete window.API_BASE_URL;
-const NEXTJS_BACKEND = 'https://0o0o0.shop/api';
+const NEXTJS_BACKEND = 'https://public-virid-chi.vercel.app/api';
 
 // ==========================================
 // 2. 核心请求工具 (只保留 Next.js 的)
@@ -146,6 +146,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI, alchemyAPI,
     post, get
 };
+
 
 
 
