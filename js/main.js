@@ -64,7 +64,7 @@ async function initSystemData() {
 
 async function updateUserInfo() {
     try {
-        const response = await fetch('api/user/info')  // 这里定义的是 response
+        const response = await fetch('https://public-4xop.vercel.app/api/user/info')
         
         const loginBtn = document.getElementById('login-btn');
         const userPanel = document.getElementById('user-logged-in');
