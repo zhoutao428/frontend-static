@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API配置 - 多AI工作台</title>
+    <link rel="stylesheet" href="config.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="config-container">
+        <div class="config-card">
+            <div class="config-header">
+                <h1><i class="fas fa-key"></i> API密钥配置</h1>
+                <p>配置您的自有 Key 以免费使用 (数据仅存本地)</p>
+            </div>
+
+            <!-- ✅ 动态容器：所有的 API 卡片都会生成在这里 -->
+            <div id="api-list-container"></div>
+
+            <!-- 操作按钮 -->
+            <div class="actions">
+                <button class="btn-save" onclick="saveAllKeys()">
+                    <i class="fas fa-save"></i> 保存并返回
+                </button>
+                <button class="btn-back" onclick="window.location.href='index.html'">
+                    <i class="fas fa-arrow-left"></i> 取消
+                </button>
+            </div>
+
+            <!-- 提示区域 -->
+            <div class="tips">
+                <h4><i class="fas fa-lightbulb"></i> 使用提示</h4>
+                <ul>
+                    <li>配置 Key 后，平台将优先使用您的 Key (免费模式)。</li>
+                    <li>如果不配置，平台将尝试使用共享资源 (可能需要付费/积分)。</li>
+                    <li>所有密钥仅存储在您的浏览器 LocalStorage 中，不会上传服务器。</li>
+                </ul>
+            </div>
+            
+            <div id="global-message" class="status-message"></div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+</body>
+</html>

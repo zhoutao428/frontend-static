@@ -1,0 +1,724 @@
+/* frontend/workflows/workflow-styles.css */
+
+:root {
+    --bg-core: #0b0e14;
+    --bg-panel: rgba(30, 41, 59, 0.6);
+    --primary: #6366f1;
+    --accent: #8b5cf6;
+    --success: #10b981;
+    --danger: #ef4444;
+    --text-main: #e2e8f0;
+    --text-dim: #64748b;
+    --glass: blur(12px);
+    --border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body {
+    background-color: var(--bg-core);
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', sans-serif;
+    overflow: hidden;
+}
+
+/* === 布局 === */
+.workflow-layout {
+    display: flex;
+    height: calc(100vh - 60px);
+    gap: 20px;
+    padding: 20px;
+    background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0b0e14 80%);
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* === 左侧执行台 === */
+.wf-sidebar {
+    width: 380px;
+    background: rgba(15, 23, 42, 0.8);
+    border: var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: var(--glass);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+}
+
+.deck-header {
+    padding: 15px 20px;
+    border-bottom: var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+}
+
+.execution-pool {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    position: relative;
+}
+
+/* 拖拽提示 */
+.empty-hint {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--text-dim);
+    border: 2px dashed rgba(255,255,255,0.1);
+    padding: 40px;
+    border-radius: 12px;
+    pointer-events: none;
+}
+.empty-hint i { font-size: 24px; margin-bottom: 10px; color: var(--primary); }
+
+/* 任务卡片 */
+.task-card {
+    background: rgba(30, 41, 59, 0.4);
+    border: var(--border);
+    border-left: 3px solid var(--text-dim); /* 默认灰色 */
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.task-card:hover { background: rgba(30, 41, 59, 0.8); }
+
+/* 运行状态特效 */
+.task-card.running {
+    border-left-color: var(--success);
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+}
+.task-card.paused { border-left-color: var(--warning); }
+.task-card.completed { border-left-color: var(--accent); opacity: 0.8; }
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.task-progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+.task-progress-fill {
+    height: 100%;
+    background: var(--success);
+    width: 0%;
+    transition: width 0.3s;
+    box-shadow: 0 0 8px var(--success);
+}
+
+.task-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.ctrl-btn {
+    width: 24px; height: 24px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    transition: 0.2s;
+}
+.ctrl-btn:hover { color: white; border-color: white; }
+.ctrl-btn.play:hover { color: var(--success); border-color: var(--success); }
+.ctrl-btn.pause:hover { color: var(--warning); border-color: var(--warning); }
+.ctrl-btn.stop:hover { color: var(--danger); border-color: var(--danger); }
+
+/* === 右侧模组库 === */
+.wf-main {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.3);
+    border: var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.library-header {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+}
+
+.template-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 15px;
+}
+
+.tpl-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: var(--border);
+    border-radius: 10px;
+    padding: 15px;
+    cursor: grab;
+    transition: all 0.2s;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.tpl-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(99, 102, 241, 0.2);
+}
+.tpl-card:active { cursor: grabbing; }
+
+/* === 详情抽屉 (Right Slide) === */
+.drawer-backdrop {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(0,0,0,0.8); 
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: none;  /* 这里保持none */
+    
+    /* 添加过渡效果 */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.drawer-backdrop.open {
+    display: flex;  /* 显示 */
+    opacity: 1;     /* 淡入 */
+}
+/* 右侧滑出型 */
+.drawer-panel.right-side {
+    position: absolute;
+    right: 0; 
+    top: 0; 
+    bottom: 0;
+    width: 600px;
+    background: #0f172a;
+    border-left: 1px solid var(--primary);
+    box-shadow: -10px 0 50px rgba(0,0,0,0.8);
+    
+    /* 修复动画：初始在屏幕外 */
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    
+    /* 确保显示 */
+    display: flex; 
+    flex-direction: column;
+}
+
+.drawer-backdrop.open .drawer-panel.right-side {
+    transform: translateX(0);  /* 滑入 */
+/* 底部滑出型 (确认框) */
+.drawer-panel.bottom-sheet {
+    position: absolute;
+    bottom: 0; 
+    left: 0; 
+    right: 0;
+    height: 200px;
+    background: #1e293b;
+    border-top: 2px solid var(--danger);
+    padding: 30px;
+    
+    /* 修复动画：初始在屏幕外 */
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    
+    /* 确保显示 */
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center;
+    gap: 20px;
+}
+
+.drawer-backdrop.open .drawer-panel.bottom-sheet {
+    transform: translateY(0);  /* 滑入 */
+/* 让抽屉先淡入再滑入，效果更好 */
+.drawer-backdrop.open .drawer-panel.right-side {
+    transform: translateX(0);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s; /* 延迟0.1秒 */
+}
+}/* 终端 */
+.terminal-wrapper {
+    flex: 1;
+    background: #000;
+    margin: 20px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    display: flex; flex-direction: column;
+    font-size: 12px;
+}
+.terminal-bar {
+    background: #1e293b; padding: 5px 10px; color: #64748b;
+    display: flex; justify-content: space-between; border-bottom: 1px solid #333;
+}
+.terminal-content {
+    flex: 1; padding: 10px; overflow-y: auto; color: #10b981; line-height: 1.5;
+}
+.log-line { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+/* 添加在现有CSS中 */
+
+/* 顶部按钮样式 */
+.btn-primary-glow {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+}
+
+.btn-small {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+/* 过滤标签 */
+.filter-bar {
+    padding: 10px 20px;
+    border-bottom: var(--border);
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-tab {
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.filter-tab.active {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: var(--primary);
+    color: white;
+}
+
+.filter-tab:hover:not(.active) {
+    border-color: var(--text-dim);
+}
+
+/* 搜索控件 */
+.search-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+/* 调整模板卡片大小 */
+.template-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* 调整大小 */
+}
+
+/* 任务卡片删除按钮 */
+.task-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.task-card:hover .task-delete-btn {
+    opacity: 1;
+}
+
+.task-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: var(--danger);
+}
+/* 步骤条 */
+.step-flow {
+    display: flex; gap: 10px; padding: 15px 20px; overflow-x: auto;
+    border-bottom: var(--border);
+}
+.step-item {
+    background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; white-space: nowrap; color: #64748b;
+}
+.step-item.active { background: var(--primary); color: white; }
+.step-item.done { color: var(--success); }
+/* 添加到 workflow-styles.css 的末尾 */
+
+/* === 顶部状态指示灯 === */
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--success);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* === 修复徽章样式（解决过大问题）=== */
+.badge {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    background: rgba(99, 102, 241, 0.2) !important;
+    border: 1px solid rgba(99, 102, 241, 0.4) !important;
+    border-radius: 10px !important;
+    color: var(--primary) !important;
+    min-width: auto !important;
+    height: auto !important;
+    line-height: 1 !important;
+}
+
+/* === 调整右侧模板卡片大小 === */
+.template-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    gap: 15px !important;
+}
+
+.tpl-card {
+    min-height: 150px !important;
+    max-height: 180px !important;
+    padding: 12px !important;
+}
+
+/* === 卡片删除按钮 === */
+.task-card {
+    position: relative;
+    padding-top: 12px !important;
+}
+
+.task-delete-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.task-card:hover .task-delete-btn {
+    opacity: 1;
+}
+
+.task-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: var(--danger);
+    transform: scale(1.1);
+}
+
+/* === 左侧标题区域按钮 === */
+.deck-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#btn-launch-sidebar {
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    height: auto !important;
+    background: rgba(16, 185, 129, 0.2) !important;
+    border: 1px solid rgba(16, 185, 129, 0.4) !important;
+    color: var(--success) !important;
+}
+
+#btn-launch-sidebar:hover {
+    background: rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* === 新建工作流特殊卡片 === */
+.new-workflow-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)) !important;
+    border: 2px dashed var(--primary) !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.new-workflow-card:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3) !important;
+}
+
+.new-workflow-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    color: var(--primary);
+}
+
+.new-workflow-text {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.new-workflow-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+/* === 搜索控件区域 === */
+.search-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* === 步骤进度条增强（集成workflow-panel样式）=== */
+.progress-section {
+    padding: 15px 20px;
+    border-bottom: var(--border);
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.panel-progress-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.panel-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 3px;
+}
+
+/* === 结果预览区域 === */
+.results-section {
+    padding: 15px 20px;
+    border-top: var(--border);
+    flex: 1;
+    overflow-y: auto;
+}
+
+.results-preview {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+    min-height: 100px;
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    font-family: 'Consolas', monospace;
+}
+
+/* === 面板控制按钮 === */
+.panel-controls {
+    display: flex;
+    gap: 10px;
+    padding: 15px 20px;
+    border-top: var(--border);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.panel-controls button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.panel-controls button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.panel-controls .btn-pause:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: var(--warning);
+}
+
+.panel-controls .btn-cancel:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--danger);
+}
+
+.panel-controls .btn-export:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: var(--success);
+}
+
+/* === 步骤列表样式 === */
+.steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.step-item.done {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.step-item.current {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border-left: 3px solid var(--primary);
+}
+
+.step-item.pending {
+    opacity: 0.6;
+}
+
+.step-icon {
+    margin-right: 8px;
+    width: 16px;
+}
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    width: 500px;
+    max-width: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header h3 {
+    margin: 0 0 16px 0;
+}
+
+#task-prompt-text {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    resize: vertical;
+}
+/* 在 workflow-styles.css 中添加 */
+#task-prompt-dialog {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+#task-prompt-dialog.open {
+    display: flex !important;
+}
+
+#task-prompt-dialog .modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    width: 500px;
+    max-width: 90%;
+}

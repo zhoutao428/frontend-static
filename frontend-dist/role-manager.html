@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>工作流工厂 - AI工作台</title>
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* 顶部组装台 */
+        .builder-area {
+            flex: 1; /* 占 50% */
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+        
+        .builder-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .builder-groups {
+            display: flex; gap: 20px; align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        
+        /* 分组容器 */
+        .build-group {
+            width: 280px;
+            background: rgba(255,255,255,0.03);
+            border: 1px dashed #666;
+            border-radius: 12px;
+            padding: 15px;
+            min-height: 150px;
+            transition: all 0.2s;
+        }
+        .build-group.drag-over {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.1);
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+        }
+        
+        .group-name-input {
+            background: transparent; border: none; color: #a5b4fc; font-weight: bold;
+            font-size: 14px; width: 100%; margin-bottom: 10px;
+            border-bottom: 1px solid transparent;
+        }
+        .group-name-input:focus { outline: none; border-bottom-color: #a5b4fc; }
+        
+        /* 底部仓库 */
+        .library-area {
+            flex: 1; /* 占 50% */
+            padding: 20px;
+            background: #0f172a;
+            overflow-y: auto;
+        }
+        
+        /* 角色小卡片 */
+        .mini-role-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 10px;
+            cursor: grab;
+            user-select: none;
+        }
+        .mini-role-card:hover { border-color: #6366f1; }
+        
+        .library-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;
+        }
+
+        /* 模态框 */
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .modal-panel {
+            background: #1e293b; border: 1px solid #6366f1; border-radius: 16px; padding: 30px;
+            width: 600px; max-width: 95%; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .config-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .config-group { flex: 1; margin-bottom: 15px; }
+        .config-group label { display: block; margin-bottom: 5px; color: #cbd5e1; font-size: 14px; }
+        .config-group input, .config-group textarea {
+            width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <header class="top-bar">
+        <div class="brand"><i class="fas fa-drafting-compass"></i> <span>工作流工厂</span></div>
+        <div class="top-controls">
+            <button class="btn btn-ghost" onclick="window.location.href='index.html'"><i class="fas fa-times"></i> 取消</button>
+            <button class="btn btn-primary-glow" onclick="saveTemplate()"><i class="fas fa-save"></i> 保存并使用</button>
+        </div>
+    </header>
+    
+    <!-- 上半部分：组装台 -->
+    <div class="builder-area" id="builder-area">
+        <div class="builder-header">
+            <div>
+                <input type="text" id="template-name" value="新工作流" 
+                       style="background:transparent; border:none; color:white; font-size:20px; font-weight:bold; width:300px;">
+                <p style="color:#64748b; font-size:12px; margin:5px 0 0 0;">从下方拖拽角色到分组中</p>
+            </div>
+            <button class="btn btn-ghost" onclick="addGroup()"><i class="fas fa-plus"></i> 新建分组</button>
+        </div>
+        <div class="builder-groups" id="builder-groups"></div>
+    </div>
+    
+    <!-- 下半部分：零件库 -->
+    <div class="library-area">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <h3 style="margin:0; color:#94a3b8;">角色零件库</h3>
+            <button class="btn btn-ghost" onclick="showCreateRoleModal(event)"><i class="fas fa-plus"></i> 造新角色</button>
+        </div>
+        <div class="library-grid" id="library-grid"></div>
+    </div>
+
+    <!-- 创建角色模态框 -->
+    <div id="create-role-modal" class="modal-backdrop">
+        <div class="modal-panel">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 style="margin:0; color:#818cf8;">创建新角色</h3>
+                <i class="fas fa-times" onclick="closeRoleModal()" style="cursor:pointer; color:#999;"></i>
+            </div>
+            <div class="config-row">
+                <div class="config-group"><label>名称 *</label><input type="text" id="role-name" placeholder="例如：文案大师"></div>
+                <div class="config-group"><label>温度 (0-1)</label><input type="number" id="role-temp" value="0.7" step="0.1" min="0" max="1"></div>
+            </div>
+            <div class="config-group"><label>描述</label><input type="text" id="role-desc"></div>
+            <div class="config-group"><label>技能 (逗号隔开)</label><input type="text" id="role-skills"></div>
+            <div class="config-group"><label>Prompt</label><textarea id="role-prompt" rows="5"></textarea></div>
+            <div style="text-align:right; margin-top:20px;">
+                <button class="btn btn-ghost" onclick="closeRoleModal()">取消</button>
+                <button class="btn btn-primary-glow" onclick="saveRole()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const token = localStorage.getItem('user_token');
+        
+        let draggedRoleId = null;
+        let builderData = [
+            { id: 'g1', title: '规划阶段', roles: [] },
+            { id: 'g2', title: '执行阶段', roles: [] }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderBuilder();
+            loadLibrary();
+        });
+
+        // 1. 渲染组装台
+        function renderBuilder() {
+            const container = document.getElementById('builder-groups');
+            container.innerHTML = '';
+            
+            builderData.forEach((group, index) => {
+                const div = document.createElement('div');
+                div.className = 'build-group';
+                div.dataset.index = index;
+                
+                // ✅ 修复：定义并绑定 drop
+                bindDropZone(div, index);
+                
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between;">
+                        <input class="group-name-input" value="${group.title}" onchange="updateGroupName(${index}, this.value)">
+                        <i class="fas fa-trash" onclick="removeGroup(${index})" style="cursor:pointer; color:#666; font-size:12px;"></i>
+                    </div>
+                    <div class="group-roles"></div>
+                `;
+                
+                const roleContainer = div.querySelector('.group-roles');
+                group.roles.forEach((roleId, rIndex) => {
+                    const card = createMiniCard(roleId, true); // true=可移除
+                    // 绑定移除事件 (闭包)
+                    const removeBtn = card.querySelector('.fa-times');
+                    if(removeBtn) removeBtn.onclick = () => removeRoleFromGroup(index, rIndex);
+                    
+                    roleContainer.appendChild(card);
+                });
+                
+                container.appendChild(div);
+            });
+        }
+
+        // 2. 加载零件库
+        async function loadLibrary() {
+            try {
+                const res = await fetch(`${API_BASE}/api/roles`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const roles = await res.json();
+                const grid = document.getElementById('library-grid');
+                grid.innerHTML = '';
+                
+                roles.forEach(role => {
+                    const canDelete = (role.type === '自定义');
+                    const card = createMiniCard(role.id, false, role.name, canDelete);
+                    
+                    // 绑定拖拽
+                    card.setAttribute('draggable', 'true');
+                    card.ondragstart = (e) => {
+                        draggedRoleId = role.id;
+                        e.dataTransfer.effectAllowed = 'copy';
+                        card.style.opacity = '0.5';
+                    };
+                    card.ondragend = () => {
+                        card.style.opacity = '1';
+                        draggedRoleId = null;
+                    };
+                    
+                    // 绑定删除 (如果可删)
+                    const delBtn = card.querySelector('.fa-trash-alt');
+                    if(delBtn) delBtn.onclick = (e) => { e.stopPropagation(); deleteRoleFromDb(role.id); };
+                    
+                    grid.appendChild(card);
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        // 3. 辅助：创建卡片 DOM
+        function createMiniCard(roleId, isRemovable, nameOverride, isDeletableFromDb) {
+            const div = document.createElement('div');
+            div.className = 'mini-role-card';
+            
+            let btnHtml = '';
+            if (isRemovable) {
+                btnHtml = '<i class="fas fa-times" style="margin-left:auto; color:#ef4444; cursor:pointer;"></i>';
+            } else if (isDeletableFromDb) {
+                btnHtml = '<i class="fas fa-trash-alt" style="margin-left:auto; color:#666; font-size:12px; cursor:pointer;"></i>';
+            }
+            
+            div.innerHTML = `
+                <i class="fas fa-user" style="color:#818cf8;"></i>
+                <span>${nameOverride || roleId}</span>
+                ${btnHtml}
+            `;
+            return div;
+        }
+
+        // 4. 拖拽逻辑 (关键修复)
+        function bindDropZone(div, groupIndex) {
+            div.ondragover = (e) => {
+                e.preventDefault();
+                div.classList.add('drag-over');
+            };
+            div.ondragleave = () => div.classList.remove('drag-over');
+            div.ondrop = (e) => {
+                e.preventDefault();
+                div.classList.remove('drag-over');
+                if (draggedRoleId) {
+                    addRoleToGroup(groupIndex, draggedRoleId);
+                }
+            };
+        }
+
+        // 5. 数据操作
+        function addGroup() {
+            builderData.push({ id: 'g'+Date.now(), title: '新分组', roles: [] });
+            renderBuilder();
+        }
+        function removeGroup(index) {
+            // 静默删除，不弹窗
+            builderData.splice(index, 1);
+            renderBuilder();
+        }
+        function updateGroupName(index, val) { builderData[index].title = val; }
+        
+        function addRoleToGroup(gIndex, roleId) {
+            if (!builderData[gIndex].roles.includes(roleId)) {
+                builderData[gIndex].roles.push(roleId);
+                renderBuilder();
+            }
+        }
+        function removeRoleFromGroup(gIndex, rIndex) {
+            builderData[gIndex].roles.splice(rIndex, 1);
+            renderBuilder();
+        }
+
+        // 6. 保存并使用
+        function saveTemplate() {
+            const name = document.getElementById('template-name').value;
+            if(!name) return alert('请输入工作流名称');
+            
+            const newTemplate = {
+                id: 'custom_' + Date.now(),
+                type: 'custom',
+                name: name,
+                description: '自定义工作流',
+                icon: 'fas fa-cogs',
+                bgClass: 'role-dev',
+                groups: builderData
+            };
+            
+            const saved = localStorage.getItem('user_templates');
+            let templates = saved ? JSON.parse(saved) : [];
+            templates.push(newTemplate);
+            localStorage.setItem('user_templates', JSON.stringify(templates));
+            
+            alert('✅ 保存成功，正在跳转...');
+            window.location.href = 'index.html';
+        }
+
+        // 7. 角色创建相关 (防闪退版)
+        function showCreateRoleModal(e) {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            const modal = document.getElementById('create-role-modal');
+            if(modal) {
+                modal.style.display = 'flex';
+                setTimeout(()=>modal.classList.add('show'), 10);
+            }
+        }
+        function closeRoleModal() {
+            document.getElementById('create-role-modal').style.display='none';
+        }
+        async function saveRole() {
+            const data = {
+                name: document.getElementById('role-name').value,
+                description: document.getElementById('role-desc').value,
+                system_prompt: document.getElementById('role-prompt').value,
+                temperature: parseFloat(document.getElementById('role-temp').value) || 0.7,
+                expertise: (document.getElementById('role-skills').value || '').split(/[,，]/),
+                format_preference: "markdown"
+            };
+            if(!data.name) return;
+            
+            try {
+                await fetch(`${API_BASE}/api/roles`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(data)
+                });
+                closeRoleModal();
+                loadLibrary();
+            } catch(e){}
+        }
+        async function deleteRoleFromDb(roleId) {
+            if(!confirm(`彻底删除 [${roleId}]?`)) return;
+            await fetch(`${API_BASE}/api/roles/${roleId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            loadLibrary();
+        }
+    </script>
+</body>
+</html>

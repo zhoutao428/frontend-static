@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>工作流控制面板</title>
+    <link rel="stylesheet" href="./workflow-styles.css">
+</head>
+<body>
+    <div class="workflow-panel">
+        <div class="panel-header">
+            <h2>🎬 工作流控制面板</h2>
+            <div class="workflow-info">
+                <span id="workflow-name">内容创作工作流</span>
+                <span class="status-badge" id="status">运行中</span>
+            </div>
+        </div>
+        
+        <div class="progress-section">
+            <div class="progress-info">
+                <span>进度</span>
+                <span id="progress-text">0/7</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="steps-container">
+            <h3>执行步骤</h3>
+            <div id="steps-list" class="steps-list">
+                <!-- 步骤动态添加 -->
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <h3>结果预览</h3>
+            <div id="results-preview" class="results-preview">
+                <!-- 结果动态更新 -->
+            </div>
+        </div>
+        
+        <div class="panel-controls">
+            <button id="btn-pause" class="btn-pause">⏸️ 暂停</button>
+            <button id="btn-cancel" class="btn-cancel">❌ 取消</button>
+            <button id="btn-export" class="btn-export" disabled>📥 导出结果</button>
+        </div>
+    </div>
+    
+    <script src="./workflow-panel.js"></script>
+</body>
+</html>
