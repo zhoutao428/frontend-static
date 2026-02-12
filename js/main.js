@@ -113,9 +113,11 @@ async function updateUserInfo() {
                 };
             }
         } else {
-            // 如果 401 未登录，显示登录按钮
-            if(loginBtn) loginBtn.style.display = 'block';
-            if(userPanel) userPanel.style.display = 'none';
+            // 如果 Token 过期了 (401)，可以强制登出
+             if (res.status === 401) {
+                 localStorage.removeItem('user_token');
+                 window.location.reload();
+            }
         }
     } catch (e) {
         console.warn("用户状态加载失败", e);
