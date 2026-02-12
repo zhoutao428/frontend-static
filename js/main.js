@@ -64,53 +64,49 @@ async function initSystemData() {
 
 async function updateUserInfo() {
     try {
-        // ✅ 正确（新地址）
+        // ✅ 1. 发送请求 (带 Cookie)
         const res = await fetch('https://public-virid-chi.vercel.app/api/user/info', {
-    method: 'GET',
-    credentials: 'include', // 👈 必须加这一行！这就好比给请求贴上了“自带干粮”的标签
-    headers: {
-        'Content-Type': 'application/json'
-    }
-});
+            method: 'GET',
+            credentials: 'include', // 👈 必须加这一行！
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
 
-
-        
         const loginBtn = document.getElementById('login-btn');
         const userPanel = document.getElementById('user-logged-in');
 
-        // ❌ 错误：这里用了 res.ok，但变量名是 response
-        // ✅ 修复：改为 response.ok
-        if (response.ok) {
-            // ❌ 错误：这里用了 res.json()，但变量名是 response
-            // ✅ 修复：改为 response.json()
-            const data = await response.json();
-            
+        // ✅ 2. 统一使用变量名 res (原来报错的地方)
+        if (res.ok) {
+            const data = await res.json(); // 👈 这里也要改
+
             if(loginBtn) loginBtn.style.display = 'none';
             if(userPanel) userPanel.style.display = 'flex';
-            
+
             const balEl = document.getElementById('user-balance');
             if(balEl) balEl.textContent = data.balance?.toLocaleString() || '0';
-            
+
             const nameEl = document.getElementById('user-name-display');
             if(nameEl) nameEl.textContent = data.email?.split('@')[0] || 'User';
-            
+
             const mailEl = document.getElementById('user-email-display');
             if(mailEl) mailEl.textContent = data.email;
-            
+
             const logoutBtn = document.getElementById('logout-btn');
             if(logoutBtn) {
-                logoutBtn.onclick = (e) => {
+                logoutBtn.onclick = async (e) => {
                     e.preventDefault();
                     if(confirm('确定退出吗？')) {
+                        // 建议加个登出接口调用
+                        // await fetch('https://public-virid-chi.vercel.app/api/auth/signout', { method: 'POST' });
                         localStorage.removeItem('user_token');
-                        // 🚨 注意：这里还是硬编码的 localhost:3001
-                        // 上线后需要改为相对路径或你的域名
-                        // window.location.href = 'http://localhost:3001/login'; 
-                        window.location.href = 'https://zhoutao428.github.io/frontend-static/login.html';
+                        // ✅ 修复登出跳转地址 (直接跳转到同域下的 login.html)
+                        window.location.href = 'login.html'; 
                     }
                 };
             }
         } else {
+            // 如果 401 未登录，显示登录按钮
             if(loginBtn) loginBtn.style.display = 'block';
             if(userPanel) userPanel.style.display = 'none';
         }
@@ -118,6 +114,7 @@ async function updateUserInfo() {
         console.warn("用户状态加载失败", e);
     }
 }
+
 async function initModelSelector() {
     const select = document.getElementById('global-model-select');
     if (!select) return;
