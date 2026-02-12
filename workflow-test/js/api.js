@@ -49,41 +49,8 @@ async function fetchAI(endpoint, options = {}) {
     }
     
     return await response.json();
+
 }
-
-// 请求 AI 后台 (修改版)
-async function fetchAI(endpoint, options = {}) {
-    const url = `${NEXTJS_BACKEND}${endpoint}`;
-    
-    // 1. 准备基础 Header
-    const headers = { 
-        'Content-Type': 'application/json',
-        ...options.headers 
-    };
-
-    // 2. 【新增逻辑】检查用户本地是否有 DeepSeek Key
-    // 假设你在 config.html 里把 key 存为了 'user_custom_key'
-    const userKey = localStorage.getItem('deepseek_api_key'); 
-    
-    if (userKey) {
-        // 如果用户有 Key，放在特殊 Header 里传过去
-        headers['X-Custom-Api-Key'] = userKey;
-        console.log("正在使用用户自定义 Key 发送请求...");
-    } else {
-        console.log("使用平台付费通道...");
-    }
-
-    // 3. 发送请求
-    const response = await fetch(url, {
-        credentials: 'include', 
-        headers: headers,
-        ...options
-    });
-
-    // ... (后面的错误处理逻辑不变) ...
-    return await response.json();
-}
-
 // ==========================================
 // 3. 业务 API 分流
 // ==========================================
@@ -170,6 +137,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI,alchemyAPI,
     post, get
 };
+
 
 
 
