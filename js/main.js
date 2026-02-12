@@ -304,6 +304,46 @@ function loadProjects() {
 function handleProjectChange(selectElement) {
     logToConsole(`切换到项目 ID: ${selectElement.value}`, 'success');
 }
+// ============ 从仓库取用角色 ============
+// 监听 sessionStorage 变化，实时刷新侧边栏
+window.addEventListener('storage', (e) => {
+    if (e.key === 'workspace_temp_roles' && e.newValue) {
+        console.log('检测到仓库取用角色，刷新工作台');
+        // 重新渲染侧边栏
+        if (window.renderSidebar) {
+            window.renderSidebar();
+        }
+    }
+});
+
+// 页面启动时读取已取用的角色
+function loadTempRolesFromWarehouse() {
+    const tempRoles = JSON.parse(sessionStorage.getItem('workspace_temp_roles') || '[]');
+    if (tempRoles.length > 0 && window.state) {
+        // 合并到 templates 中显示
+        tempRoles.forEach(role => {
+            // 避免重复
+            if (!window.state.templates.some(t => t.id === role.id)) {
+                window.state.templates.push({
+                    id: role.id,
+                    name: role.name,
+                    description: role.description,
+                    icon: role.icon || 'fa-user',
+                    bgClass: role.bg_class || 'role-dev',
+                    type: 'temp', // 标记为临时角色
+                    fromWarehouse: true
+                });
+            }
+        });
+        if (window.renderSidebar) window.renderSidebar();
+    }
+}
+
+// 在 DOMContentLoaded 事件中调用
+document.addEventListener('DOMContentLoaded', () => {
+    // ... 原有代码 ...
+    loadTempRolesFromWarehouse(); // 添加这行
+});
 // 在 main.js 中添加事件监听
 window.addEventListener('sidebar-refresh', () => {
     if (window.renderSidebar) window.renderSidebar();
