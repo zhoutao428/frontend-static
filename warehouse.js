@@ -1,7 +1,7 @@
 // warehouse.js - 仓库页面逻辑
 
 // ============ 配置 ============
-const API_BASE = 'https://public-virid-chi.vercel.app'; 改成你的后端地址
+const API_BASE = 'https://public-virid-chi.vercel.app';
 
 // ============ 状态 ============
 let currentTab = 'roles'; // roles / workflows
