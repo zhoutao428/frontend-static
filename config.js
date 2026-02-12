@@ -163,7 +163,7 @@ window.testApi = async (providerId) => {
         
         // 发送请求到 Next.js 后台 (/api/chat)
         // 带着 X-Custom-Api-Key，这样后台就不会扣费
-        const response = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api/chat', {
+        const response = await fetch('https://public-virid-chi.vercel.app/api/chat', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -191,4 +191,5 @@ window.testApi = async (providerId) => {
         btn.disabled = false;
     }
 };
+
 
