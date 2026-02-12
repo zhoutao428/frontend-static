@@ -64,14 +64,21 @@ async function initSystemData() {
 
 async function updateUserInfo() {
     try {
-        // ✅ 1. 发送请求 (带 Cookie)
+        // 1. 从本地获取 Token (登录时存进去的)
+        const token = localStorage.getItem('user_token');
+        
+        // 如果没 token，说明肯定没登录，直接跳过请求
+        if (!token) return;
+
+        // 2. 发送请求 (把 Token 放在 Header 里传过去)
         const res = await fetch('https://public-virid-chi.vercel.app/api/user/info', {
             method: 'GET',
-            credentials: 'include', // 👈 必须加这一行！
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // 👈 关键！手动带上令牌
             }
         });
+
 
         const loginBtn = document.getElementById('login-btn');
         const userPanel = document.getElementById('user-logged-in');
