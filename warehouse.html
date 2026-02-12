@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>角色仓库 · AI工作台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- 1. 完全复用工厂的style.css -->
+    <link rel="stylesheet" href="./style.css">
+    <!-- 2. 仓库专属样式（极简，仅布局覆盖） -->
+    <link rel="stylesheet" href="./warehouse.css">
+</head>
+<body>
+    <!-- 顶部导航（复用工厂风格） -->
+    <header class="test-header">
+        <h1><i class="fas fa-warehouse"></i> 角色仓库</h1>
+        <div class="test-controls">
+            <button onclick="window.location.href='index.html'">
+                <i class="fas fa-arrow-left"></i> 返回工作台
+            </button>
+            <button id="refresh-btn">
+                <i class="fas fa-sync-alt"></i> 刷新
+            </button>
+        </div>
+    </header>
+
+    <!-- 仓库主容器 -->
+    <div class="warehouse-container">
+        <!-- 标签页 -->
+        <div class="warehouse-tabs">
+            <div class="tab active" data-tab="roles">
+                <i class="fas fa-user"></i> 角色仓库
+                <span class="tab-count" id="role-count">0</span>
+            </div>
+            <div class="tab" data-tab="workflows">
+                <i class="fas fa-diagram-project"></i> 工作流仓库
+                <span class="tab-count" id="workflow-count">0</span>
+            </div>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="warehouse-search">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="搜索角色、技能或标签...">
+            </div>
+            <div class="search-filter">
+                <span id="total-count">共 0 个角色</span>
+            </div>
+        </div>
+
+        <!-- 卡片网格 - 完全复用工厂的 parts-grid 结构 -->
+        <div class="parts-grid-container warehouse-grid">
+            <div class="parts-grid" id="role-grid">
+                <!-- JS动态渲染，这里只放静态示例 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入仓库JS -->
+    <script src="./warehouse.js"></script>
+</body>
+</html>
