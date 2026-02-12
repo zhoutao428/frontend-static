@@ -27,14 +27,23 @@ async function fetchAI(endpoint, options = {}) {
         ...options.headers 
     };
 
-    // 2. 【新增逻辑】检查用户本地是否有 DeepSeek Key
+    // 2. 检查用户本地是否有 DeepSeek Key
     const userKey = localStorage.getItem('deepseek_api_key'); 
     
     if (userKey) {
+        // 优先使用用户自定义 Key
         headers['X-Custom-Api-Key'] = userKey;
         console.log("正在使用用户自定义 Key 发送请求...");
     } else {
+        // 没有自定义 Key，使用平台账号（必须带登录 Token）
         console.log("使用平台付费通道...");
+        const token = localStorage.getItem('user_token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+            console.log("已携带登录 Token");
+        } else {
+            console.warn("未登录且无自定义 Key，请求可能会返回 401");
+        }
     }
 
     // 3. 发送请求
@@ -49,7 +58,6 @@ async function fetchAI(endpoint, options = {}) {
     }
     
     return await response.json();
-
 }
 // ==========================================
 // 3. 业务 API 分流
@@ -137,6 +145,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI,alchemyAPI,
     post, get
 };
+
 
 
 
