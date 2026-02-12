@@ -2,7 +2,7 @@
 // 1. 地址配置 (根据你的实际端口)
 // ==========================================
 const PYTHON_BACKEND = 'http://localhost:8000';    // 原后台 (Roles, Projects)
-const NEXTJS_BACKEND = 'http://localhost:3001/api'; // 新 AI 后台 (Chat)
+const NEXTJS_BACKEND = 'https://public-virid-chi.vercel.app/api'; 
 
 // ==========================================
 // 2. 核心请求工具
@@ -166,3 +166,4 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI,alchemyAPI,
     post, get
 };
+
