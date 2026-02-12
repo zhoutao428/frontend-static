@@ -64,7 +64,9 @@ async function initSystemData() {
 
 async function updateUserInfo() {
     try {
-        const response = await fetch('https://public-4xop.vercel.app/api/user/info')
+        // ✅ 正确（新地址）
+        const response = await fetch('https://public-virid-chi.vercel.app/api/user/info')
+
         
         const loginBtn = document.getElementById('login-btn');
         const userPanel = document.getElementById('user-logged-in');
