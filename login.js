@@ -12,6 +12,7 @@ if (window.supabase && window.supabase.createClient) {
     console.error("Supabase SDK 未加载！请检查 HTML head 中的 script 标签。");
     // 为了防止下面报错，给个空对象兜底，但功能肯定是用不了的
     supabaseClient = { auth: { signInWithPassword: () => Promise.reject("SDK未加载"), signUp: () => Promise.reject("SDK未加载") } };
+    window.supabaseClient = supabaseClient;
 }
 async function handleLogin(event) {
     if (event) event.preventDefault();
@@ -180,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.ctrlKey && e.key === 'r') { e.preventDefault(); switchTab('register'); }
     });
 });
+
 
 
 
