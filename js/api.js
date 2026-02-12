@@ -11,12 +11,47 @@ const NEXTJS_BACKEND = 'https://public-virid-chi.vercel.app/api';
 
 // 请求 AI 后台
 async function fetchAI(endpoint, options = {}) {
+    // ========== 自动刷新 Token ==========
+    const token = localStorage.getItem('user_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    if (token && refreshToken && window.supabaseClient) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const exp = payload.exp * 1000;
+            const now = Date.now();
+            
+            // 如果 5 分钟内过期，自动刷新
+            if (exp - now < 5 * 60 * 1000) {
+                console.log('🔄 Token即将过期，自动刷新...');
+                const { data, error } = await window.supabaseClient.auth.refreshSession();
+                
+                if (!error && data.session) {
+                    localStorage.setItem('user_token', data.session.access_token);
+                    localStorage.setItem('refresh_token', data.session.refresh_token);
+                    console.log('✅ Token刷新成功');
+                }
+            }
+        } catch (e) {
+            console.warn('Token解析失败(非JWT格式)', e);
+        }
+    }
+    // ====================================
+
     const url = `${NEXTJS_BACKEND}${endpoint}`;
     const headers = { 'Content-Type': 'application/json', ...options.headers };
-
+    
     // 检查自定义 Key
     const userKey = localStorage.getItem('deepseek_api_key'); 
-    if (userKey) headers['X-Custom-Api-Key'] = userKey;
+    if (userKey) {
+        headers['X-Custom-Api-Key'] = userKey;
+    } else {
+        // 没有自定义Key时，带上登录Token
+        const token = localStorage.getItem('user_token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+    }
 
     try {
         const response = await fetch(url, {
@@ -26,10 +61,8 @@ async function fetchAI(endpoint, options = {}) {
         });
         
         if (!response.ok) {
-            // 如果 401，提示去登录
             if (response.status === 401) {
-                console.warn("AI服务未登录 (401)"); 
-                // 主页可以不弹窗，只是让相关功能不可用
+                console.warn("AI服务未登录或Token已过期 (401)"); 
             }
             throw new Error(`AI后台报错: ${response.status}`);
         }
@@ -39,9 +72,6 @@ async function fetchAI(endpoint, options = {}) {
         throw e;
     }
 }
-
-// 模拟 Python 后端的响应 (Mock Data)
-const mockDelay = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ==========================================
 // 3. 业务 API (混合模式)
@@ -146,6 +176,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI, alchemyAPI,
     post, get
 };
+
 
 
 
