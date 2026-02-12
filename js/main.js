@@ -65,9 +65,14 @@ async function initSystemData() {
 async function updateUserInfo() {
     try {
         // ✅ 正确（新地址）
-        const response = await fetch('https://public-virid-chi.vercel.app/api/user/info', {
-  credentials: 'include'
-})
+        const res = await fetch('https://public-virid-chi.vercel.app/api/user/info', {
+    method: 'GET',
+    credentials: 'include', // 👈 必须加这一行！这就好比给请求贴上了“自带干粮”的标签
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
+
 
         
         const loginBtn = document.getElementById('login-btn');
