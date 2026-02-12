@@ -13,9 +13,6 @@ if (window.supabase && window.supabase.createClient) {
     // 为了防止下面报错，给个空对象兜底，但功能肯定是用不了的
     supabaseClient = { auth: { signInWithPassword: () => Promise.reject("SDK未加载"), signUp: () => Promise.reject("SDK未加载") } };
 }
-
-// frontend/login.js - 修复版 handleLogin
-
 async function handleLogin(event) {
     if (event) event.preventDefault();
     
@@ -27,7 +24,7 @@ async function handleLogin(event) {
     showLoading(true);
     
     try {
-        // 1. 在前端登录 Supabase (这一步你现在已经跑通了)
+        // 1. 在前端登录 Supabase
         const { data, error } = await supabaseClient.auth.signInWithPassword({
             email: email,
             password: password
@@ -35,30 +32,28 @@ async function handleLogin(event) {
 
         if (error) throw error;
 
-        // 2. 存本地 Token (为了前端逻辑)
+        // 2. 存本地 Token (给前端逻辑用)
         localStorage.setItem('user_token', data.session.access_token);
         localStorage.setItem('user_email', data.user.email);
         localStorage.setItem('user_id', data.user.id);
 
         showToast('登录成功！正在同步...', 'success');
 
-        // 3. ⚠️ 新增：通知后台(3001)种 Cookie
-        // 这一步是为了让后续调用 /api/chat 不会报 401
+        // 3. ⚠️ 关键步骤：通知后台种 Cookie
         try {
-            // ✅ 换成你现在绿灯那个新域名
-        await fetch('https://public-virid-chi.vercel.app/api/auth/cookie', { 
-
+            // ✅ 确保这里是你绿色的新域名
+            await fetch('https://public-virid-chi.vercel.app/api/auth/cookie', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', // 关键！允许跨域写 Cookie
+                credentials: 'include', // 👈 必须有，允许跨域带 Cookie
+                // ✅ 修改点：直接传整个 session 对象
                 body: JSON.stringify({
-                    access_token: data.session.access_token,
-                    refresh_token: data.session.refresh_token
+                    session: data.session 
                 })
             });
             console.log("后台 Session 同步成功");
         } catch (e) {
-            console.warn("后台同步失败 (不影响前台使用):", e);
+            console.warn("后台同步失败:", e);
         }
 
         // 4. 跳转回主页
@@ -73,6 +68,7 @@ async function handleLogin(event) {
         showLoading(false);
     }
 }
+
 // 3. 注册函数
 async function handleRegister(event) {
     if (event) event.preventDefault();
@@ -183,5 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.ctrlKey && e.key === 'r') { e.preventDefault(); switchTab('register'); }
     });
 });
+
 
 
