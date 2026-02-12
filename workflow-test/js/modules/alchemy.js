@@ -283,6 +283,11 @@ export async function callRealAIForEnhancement(roleInfo, modelId) {
     else {
         log(`🤖 请求云端炼丹 (Prompt 受保护)...`);
         try {
+            // 👇 调试代码：打印 modelId 的详细信息
+            console.log('🔥【炼丹调试】roleName:', roleInfo.name);
+            console.log('🔥【炼丹调试】原始modelId:', modelId, '类型:', typeof modelId);
+            console.log('🔥【炼丹调试】转换后modelId:', typeof modelId === 'string' ? parseInt(modelId, 10) : modelId);
+            
             // alchemyAPI.forge 已经在 api.js 里定义好了
             // 后台返回的已经是解析好的 JSON 对象，不需要再 parseJSONSafe
             enhancedData = await alchemyAPI.forge(roleInfo.name, modelId);
@@ -712,4 +717,5 @@ export async function runAgent(roleId, prompt) {
         console.error("Agent execution failed:", e);
         throw e;
     }
+
 }
