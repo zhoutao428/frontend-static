@@ -17,21 +17,38 @@ function handleErrorResponse(response) {
 }
 
 // --- 工具 A: 访问 Python 后台 (带 Token) ---
-async function fetchPython(endpoint, options = {}) {
-    const url = `${PYTHON_BACKEND}${endpoint}`; 
+async function fetchAI(endpoint, options = {}) {
+    const url = `${NEXTJS_BACKEND}${endpoint}`;
     
-    // 获取 Token (如果你以前是通过 localStorage 存的)
-    const token = localStorage.getItem('user_token');
-    const headers = {
+    // 1. 准备基础 Header
+    const headers = { 
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
+        ...options.headers 
     };
 
-    try {
-        const response = await fetch(url, {
-            headers: { ...headers, ...options.headers },
-            ...options
-        });
+    // 2. 鉴权逻辑 A: 优先检查用户自定义 Key (DeepSeek/OpenAI Key)
+    const userKey = localStorage.getItem('deepseek_api_key'); 
+    
+    // 3. 鉴权逻辑 B: 如果没有自定义 Key，必须带上登录 Token (Authorization)
+    const token = localStorage.getItem('user_token');
+
+    if (userKey) {
+        headers['X-Custom-Api-Key'] = userKey;
+        console.log("正在使用用户自定义 Key 发送请求...");
+    } else if (token) {
+        // ⚠️ 关键修复：带上 Token，防止 401
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log("使用平台付费通道 (已登录)...");
+    } else {
+        console.warn("未登录且无自定义Key，请求可能会失败");
+    }
+
+    // 3. 发送请求
+    const response = await fetch(url, {
+        // credentials: 'include', // 既然用了 Header Token，这行可以删了，留着也无害
+        headers: headers,
+        ...options
+    });
         
         if (response.status === 401) {
             console.error("Python后台认证失败！请重新登录原系统。");
@@ -166,4 +183,5 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI,alchemyAPI,
     post, get
 };
+
 
