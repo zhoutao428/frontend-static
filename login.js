@@ -34,6 +34,7 @@ async function handleLogin(event) {
 
         // 2. 存本地 Token (给前端逻辑用)
         localStorage.setItem('user_token', data.session.access_token);
+        localStorage.setItem('refresh_token', data.session.refresh_token);
         localStorage.setItem('user_email', data.user.email);
         localStorage.setItem('user_id', data.user.id);
 
@@ -179,6 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.ctrlKey && e.key === 'r') { e.preventDefault(); switchTab('register'); }
     });
 });
+
 
 
 
