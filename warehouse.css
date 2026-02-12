@@ -226,6 +226,10 @@
     to { transform: rotate(360deg); }
 }
 
+.test-header h1 {
+    color: #f0f9ff !important;  /* 亮白带一点蓝 */
+    text-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+}
 /* 滚动条 - 继承工厂样式，只微调 */
 .warehouse-grid .parts-grid::-webkit-scrollbar {
     width: 4px;
