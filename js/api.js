@@ -1,4 +1,9 @@
-// frontend/js/api.js (最终修复版)
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+    'https://uispjsahipixbocvfdrg.supabase.co',
+    'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'
+);// frontend/js/api.js (最终修复版)
 
 // ✅ 1. 定义常量 (修复变量名不一致的问题)
 const API_BASE_URL = 'https://public-virid-chi.vercel.app/api';
@@ -170,3 +175,4 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI, alchemyAPI,
     post, get
 };
+
