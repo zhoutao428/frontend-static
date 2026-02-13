@@ -100,7 +100,7 @@ async function loadRoles() {
         const { data } = await window.supabase.auth.getSession();
         console.log('2. getSession 完成', data);
         const token = data.session?.access_token;
-        console.log('token 是否存在:', !!token);
+        console.log('当前使用的 token:', token);
         const res = await fetch(`${API_BASE}/api/roles`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
