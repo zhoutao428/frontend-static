@@ -65,4 +65,6 @@ export const state = {
 
     // 运行时数据 (包含用户的自定义模板)
     templates: [] 
+
 };
+window.state = state;
