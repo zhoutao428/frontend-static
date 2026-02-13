@@ -1,10 +1,10 @@
-// warehouse.js - 仓库页面逻辑
+// warehouse.js - 仓库页面逻辑（完整修复版）
 
 // ============ 配置 ============
 const API_BASE = 'https://public-virid-chi.vercel.app';
 
 // ============ 状态 ============
-let currentTab = 'roles'; // roles / workflows
+let currentTab = 'roles';
 let allRoles = [];
 let filteredRoles = [];
 let searchTerm = '';
@@ -12,25 +12,19 @@ let searchTerm = '';
 // ============ 初始化 ============
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('仓库页面初始化');
-    
-    // 绑定事件
     bindEvents();
-    
-    // 加载数据
     await loadRoles();
 });
 
 // ============ 事件绑定 ============
 function bindEvents() {
-    // 标签页切换
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             const tabName = tab.dataset.tab;
             switchTab(tabName);
         });
     });
-    
-    // 搜索框
+
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -38,8 +32,7 @@ function bindEvents() {
             filterRoles();
         });
     }
-    
-    // 刷新按钮
+
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
@@ -51,31 +44,16 @@ function bindEvents() {
 // ============ 标签页切换 ============
 function switchTab(tabName) {
     if (tabName === currentTab) return;
-    
-    // 更新UI
+
     document.querySelectorAll('.tab').forEach(tab => {
-        if (tab.dataset.tab === tabName) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
     });
-    
+
     currentTab = tabName;
-    
-    // 更新标题和搜索占位符
+
     const searchInput = document.getElementById('search-input');
     const totalCount = document.getElementById('total-count');
-    // 从 window.supabase 获取最新的 token
-async function loadRoles() {
-    try {
-        // ✅ 在这里拿 token
-        const { data } = await window.supabase.auth.getSession();
-        const token = data.session?.access_token;
-        
-        const res = await fetch(`${API_BASE}/api/roles`, {
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+
     if (tabName === 'roles') {
         searchInput.placeholder = '搜索角色、技能或标签...';
         totalCount.textContent = `共 ${filteredRoles.length} 个角色`;
@@ -83,7 +61,6 @@ async function loadRoles() {
     } else {
         searchInput.placeholder = '搜索工作流、阶段或角色数...';
         totalCount.textContent = '共 0 个工作流';
-        // TODO: 加载工作流
         document.getElementById('role-grid').innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-diagram-project"></i>
@@ -98,28 +75,30 @@ async function loadRoles() {
     const grid = document.getElementById('role-grid');
     grid.innerHTML = `
         <div class="loading-state">
-            <i class="fas fa-spinner"></i>
+            <i class="fas fa-spinner fa-spin"></i>
             <p>加载角色中...</p>
         </div>
     `;
-    
+
     try {
-        const token = localStorage.getItem('user_token');
+        // ✅ 从 window.supabase 获取最新 token
+        const { data } = await window.supabase.auth.getSession();
+        const token = data.session?.access_token;
+
         const res = await fetch(`${API_BASE}/api/roles`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
-        
+
         if (!res.ok) throw new Error('加载失败');
-        
+
         allRoles = await res.json();
         filteredRoles = [...allRoles];
-        
-        // 更新计数
+
         document.getElementById('role-count').textContent = allRoles.length;
         document.getElementById('total-count').textContent = `共 ${allRoles.length} 个角色`;
-        
+
         renderRoles();
-        
+
     } catch (error) {
         console.error('加载角色失败:', error);
         grid.innerHTML = `
@@ -146,7 +125,7 @@ function filterRoles() {
             return name.includes(searchTerm) || desc.includes(searchTerm) || tags.includes(searchTerm);
         });
     }
-    
+
     document.getElementById('total-count').textContent = `共 ${filteredRoles.length} 个角色`;
     renderRoles();
 }
@@ -154,7 +133,7 @@ function filterRoles() {
 // ============ 渲染角色 ============
 function renderRoles() {
     const grid = document.getElementById('role-grid');
-    
+
     if (filteredRoles.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
@@ -165,32 +144,27 @@ function renderRoles() {
         `;
         return;
     }
-    
+
     grid.innerHTML = filteredRoles.map(role => {
-        // 判断角色类型
         const isSystem = role.role_type === 'system' || role.type === 'system';
         const isDeletable = role.is_deletable === true || role.role_type === 'user';
-        
-        // 角标
-        const badgeHtml = isSystem 
+
+        const badgeHtml = isSystem
             ? `<span class="role-badge prebuild"><i class="fas fa-star"></i> 预制</span>`
             : `<span class="role-badge user"><i class="fas fa-thumbtack"></i> 我的</span>`;
-        
-        // 删除按钮（仅我的角色）
+
         const deleteBtn = !isSystem && isDeletable
             ? `<i class="fas fa-trash-alt btn-delete" onclick="deleteRole(${role.id}, event)"></i>`
             : '';
-        
-        // 技能标签
+
         const expertise = Array.isArray(role.expertise) ? role.expertise : [];
-        const tagsHtml = expertise.slice(0, 3).map(tag => 
+        const tagsHtml = expertise.slice(0, 3).map(tag =>
             `<span class="tag">${tag}</span>`
         ).join('');
-        
-        // 图标和颜色
+
         const icon = role.icon || 'fa-user';
         const bgClass = role.bg_class || 'role-dev';
-        
+
         return `
             <div class="part-card" data-role-id="${role.id}">
                 <div class="part-header">
@@ -205,9 +179,7 @@ function renderRoles() {
                     ${expertise.length > 3 ? `<span class="tag">+${expertise.length - 3}</span>` : ''}
                 </div>
                 <div class="part-actions-warehouse">
-                    <div>
-                        ${badgeHtml}
-                    </div>
+                    <div>${badgeHtml}</div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <button class="btn-take" onclick="takeRole(${role.id}, '${role.name}', event)">
                             <i class="fas fa-briefcase"></i> 取用
@@ -223,15 +195,11 @@ function renderRoles() {
 // ============ 取用角色 ============
 window.takeRole = function(roleId, roleName, event) {
     event.stopPropagation();
-    
-    // 获取完整角色信息
     const role = allRoles.find(r => r.id === roleId);
     if (!role) return;
-    
-    // 存入 sessionStorage
+
     let tempRoles = JSON.parse(sessionStorage.getItem('workspace_temp_roles') || '[]');
-    
-    // 去重
+
     if (!tempRoles.some(r => r.id === roleId)) {
         tempRoles.push({
             id: roleId,
@@ -241,47 +209,40 @@ window.takeRole = function(roleId, roleName, event) {
             bgClass: role.bg_class || 'role-dev',
             originalId: role.id
         });
-        
         sessionStorage.setItem('workspace_temp_roles', JSON.stringify(tempRoles));
     }
-    
-    // 提示
+
     showToast(`✅ ${roleName} 已放入工作台`);
 };
 
 // ============ 删除角色 ============
 window.deleteRole = async function(roleId, event) {
     event.stopPropagation();
-    
-    if (!confirm('确定删除这个角色吗？此操作不可恢复。')) {
-        return;
-    }
-    
+    if (!confirm('确定删除这个角色吗？此操作不可恢复。')) return;
+
     try {
-        const token = localStorage.getItem('user_token');
+        const { data } = await window.supabase.auth.getSession();
+        const token = data.session?.access_token;
+
         const res = await fetch(`${API_BASE}/api/roles/${roleId}`, {
             method: 'DELETE',
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
-        
+
         if (!res.ok) {
             const error = await res.json();
             throw new Error(error.error || '删除失败');
         }
-        
-        // 从列表中移除
+
         allRoles = allRoles.filter(r => r.id !== roleId);
         filteredRoles = filteredRoles.filter(r => r.id !== roleId);
-        
-        // 更新计数
+
         document.getElementById('role-count').textContent = allRoles.length;
         document.getElementById('total-count').textContent = `共 ${filteredRoles.length} 个角色`;
-        
-        // 重新渲染
+
         renderRoles();
-        
         showToast('✅ 角色已删除');
-        
+
     } catch (error) {
         alert(error.message);
     }
@@ -289,7 +250,6 @@ window.deleteRole = async function(roleId, event) {
 
 // ============ 提示 Toast ============
 function showToast(message) {
-    // 检查是否已存在toast容器
     let toast = document.querySelector('.warehouse-toast');
     if (!toast) {
         toast = document.createElement('div');
@@ -312,16 +272,15 @@ function showToast(message) {
         `;
         document.body.appendChild(toast);
     }
-    
+
     toast.textContent = message;
     toast.style.opacity = '1';
-    
-    // 3秒后消失
+
     clearTimeout(window.toastTimer);
     window.toastTimer = setTimeout(() => {
         toast.style.opacity = '0';
     }, 3000);
 }
 
-// 暴露到全局
+// ============ 暴露到全局 ============
 window.switchTab = switchTab;
