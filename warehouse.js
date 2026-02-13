@@ -209,7 +209,7 @@ window.takeRole = function(roleId, roleName, event) {
             bgClass: role.bg_class || 'role-dev',
             originalId: role.id
         });
-        sessionStorage.setItem('workspace_temp_roles', JSON.stringify(tempRoles));
+        localStorage.setItem('workspace_temp_roles', JSON.stringify(tempRoles));
     }
 
     showToast(`✅ ${roleName} 已放入工作台`);
