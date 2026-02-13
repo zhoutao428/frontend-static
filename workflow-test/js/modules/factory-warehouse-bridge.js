@@ -72,7 +72,8 @@
                               RolePartsLibrary.getRoleDetails?.(roleId);
                 }
                 
-                const token = localStorage.getItem('user_token');
+                const { data } = await window.supabase.auth.getSession();
+                const token = data.session?.access_token;
                 if (!token) {
                     alert('请先登录');
                     btn.disabled = false;
@@ -128,5 +129,6 @@
         }
     }
 })();
+
 
 
