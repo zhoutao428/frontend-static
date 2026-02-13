@@ -67,7 +67,7 @@ function switchTab(tabName) {
     const searchInput = document.getElementById('search-input');
     const totalCount = document.getElementById('total-count');
     // 从 window.supabase 获取最新的 token
-    async function loadRoles() {
+async function loadRoles() {
     try {
         // ✅ 在这里拿 token
         const { data } = await window.supabase.auth.getSession();
