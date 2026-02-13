@@ -24,13 +24,6 @@ if (!supabase || !supabase.auth) {
     console.warn("⚠️ Supabase 客户端未就绪，请检查 index.html");
 }
 
-// 2. 获取有效 Token (自动刷新)
-async function getValidToken() {
-    if (!supabase) return null;
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token || null;
-}
-
 // ✅ 新增：获取有效 Token 的函数 (会自动刷新)
 async function getValidToken() {
     // 1. 问 SDK 要当前的 Session
