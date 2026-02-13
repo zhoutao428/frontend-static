@@ -231,7 +231,27 @@
         <!-- 执行结果将动态显示在这里 -->
     </div>
 </div>
-     <!-- 加载JavaScript文件 -->
+     <!<!-- 1. 引入 SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- 2. 初始化 Supabase (这一步必须在 api.js 之前！) -->
+<script>
+    // 你的 Supabase 配置
+    const SUPABASE_URL = 'https://uispjsahipixbocvfdrg.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'; // 你的 Key
+
+    // 初始化客户端并挂载到 window
+    if (window.supabase) {
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // 关键：为了兼容 api.js 的写法 (window.supabase.auth...)
+        window.supabase = window.supabaseClient;
+        
+        console.log("✅ Supabase SDK 已就绪 (炼丹炉)");
+    } else {
+        console.error("❌ SDK 加载失败，请检查网络");
+    }
+</script>
 
       <script src="js/config/role-parts-library.js"></script>
     <script src="js/alchemy-animation.js"></script>
@@ -246,6 +266,7 @@
 </body>
 
 </html>
+
 
 
 
