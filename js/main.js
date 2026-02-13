@@ -9,6 +9,25 @@ import { loadSavedWorkflows, loadWorkflowToStage } from './workflow-manager.js';
 import { createRoleCard, getRoleMeta } from './role-utils.js';
 import { renderSidebar, renderRootView, renderDetailView, createTemplateCard } from './sidebar-renderer.js';
 import { renderHoloDeck, removeRoleFromGroup, moveRoleToGroup } from './holo-deck.js';
+// 你的 Supabase 配置 (和 login.js 保持一致)
+const SUPABASE_URL = 'https://uispjsahipixbocvfdrg.supabase.co'; 
+const SUPABASE_KEY = 'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'; // 你的 Key
+
+// 初始化客户端
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ✅ 新增：获取有效 Token 的函数 (会自动刷新)
+async function getValidToken() {
+    // 1. 问 SDK 要当前的 Session
+    const { data, error } = await supabase.auth.getSession();
+    
+    // 2. 如果有 Session，返回最新的 access_token
+    if (data?.session) {
+        return data.session.access_token;
+    }
+    return null;
+}
+
 // ==========================================
 // 1. 系统启动
 // ==========================================
@@ -65,7 +84,7 @@ async function initSystemData() {
 async function updateUserInfo() {
     try {
         // 1. 从本地获取 Token (登录时存进去的)
-        const token = localStorage.getItem('user_token');
+        const token = await getValidToken();
         
         // 如果没 token，说明肯定没登录，直接跳过请求
         if (!token) return;
@@ -115,10 +134,12 @@ async function updateUserInfo() {
         } else {
             // 如果 Token 过期了 (401)，可以强制登出
              if (res.status === 401) {
-                 localStorage.removeItem('user_token');
-                 window.location.reload();
-            }
+             console.warn("Token失效且无法刷新，强制登出");
+             localStorage.removeItem('user_token');
+             // supabase.auth.signOut(); // 最好也调一下 SDK 的登出
+             // window.location.href = 'login.html'; 
         }
+
     } catch (e) {
         console.warn("用户状态加载失败", e);
     }
