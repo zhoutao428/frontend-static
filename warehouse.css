@@ -120,6 +120,7 @@
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 16px;
     padding: 4px 0 24px;
+    align-content: start;
 }
 
 /* 卡片角标 - 新增，不影响卡片结构 */
