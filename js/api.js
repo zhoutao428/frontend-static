@@ -7,72 +7,87 @@ const NEXTJS_BACKEND = 'https://public-virid-chi.vercel.app/api';
 
 // ==========================================
 // 2. 核心请求工具 (只保留 Next.js 的)
-// ==========================================
+// =========================================
 
-// 请求 AI 后台
 async function fetchAI(endpoint, options = {}) {
-    // ========== 自动刷新 Token ==========
-    const token = localStorage.getItem('user_token');
-    const refreshToken = localStorage.getItem('refresh_token');
-    
-    if (token && refreshToken && window.supabaseClient) {
+    // 1. 获取最新 Token (优先问 SDK 要)
+    let token = null;
+
+    // A. 尝试通过 Supabase SDK 获取 (自动处理续期)
+    if (window.supabase) {
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const exp = payload.exp * 1000;
-            const now = Date.now();
-            
-            // 如果 5 分钟内过期，自动刷新
-            if (exp - now < 5 * 60 * 1000) {
-                console.log('🔄 Token即将过期，自动刷新...');
-                const { data, error } = await window.supabaseClient.auth.refreshSession();
-                
-                if (!error && data.session) {
-                    localStorage.setItem('user_token', data.session.access_token);
-                    localStorage.setItem('refresh_token', data.session.refresh_token);
-                    console.log('✅ Token刷新成功');
-                }
+            const { data } = await window.supabase.auth.getSession();
+            // 如果有 session，这个 token 绝对是最新的
+            if (data?.session) {
+                token = data.session.access_token;
             }
         } catch (e) {
-            console.warn('Token解析失败(非JWT格式)', e);
+            console.warn("SDK获取Session失败，尝试本地Token", e);
         }
     }
-    // ====================================
 
-    const url = `${NEXTJS_BACKEND}${endpoint}`;
-    const headers = { 'Content-Type': 'application/json', ...options.headers };
-    
-    // 检查自定义 Key
-    const userKey = localStorage.getItem('deepseek_api_key'); 
-    if (userKey) {
-        headers['X-Custom-Api-Key'] = userKey;
+    // B. 如果 SDK 没取到，尝试从本地 localStorage 兜底
+    if (!token) {
+        token = localStorage.getItem('user_token');
+    }
+
+    // 2. 构造请求 URL (确保用的是新后台地址)
+    const url = `${API_BASE_URL}${endpoint}`; // 确保 API_BASE_URL 已经在前面定义过
+
+    // 3. 构造请求头
+    const headers = { 
+        'Content-Type': 'application/json',
+        ...options.headers 
+    };
+
+    // 4. 添加 Authorization 头
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
     } else {
-        // 没有自定义Key时，带上登录Token
-        const token = localStorage.getItem('user_token');
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
+        // 如果没 Token，可能是未登录状态
+        // 这里不 throw Error，因为有些接口可能允许匿名访问
+        console.warn(`[API] 请求 ${endpoint} 未携带 Token (可能未登录)`);
+    }
+
+    // 5. 检查是否需要自定义 Key (针对 Chat 接口)
+    const userCustomKey = localStorage.getItem('deepseek_api_key');
+    if (userCustomKey && endpoint.includes('/chat')) {
+        headers['X-Custom-Api-Key'] = userCustomKey;
+        // 如果有自定义 Key，可以不用 Token (视后端逻辑而定)
     }
 
     try {
+        // 6. 发送请求
         const response = await fetch(url, {
-            credentials: 'include', 
-            headers: headers,
-            ...options
+            ...options,
+            headers: headers
         });
-        
-        if (!response.ok) {
-            if (response.status === 401) {
-                console.warn("AI服务未登录或Token已过期 (401)"); 
-            }
-            throw new Error(`AI后台报错: ${response.status}`);
+
+        // 7. 处理 401 未授权 (Token过期或无效)
+        if (response.status === 401) {
+            console.error("Token 失效或未登录，请重新登录");
+            // 可选：清除本地失效 Token
+            localStorage.removeItem('user_token');
+            
+            // 可选：强制跳转登录页 (慎用，可能会打断用户操作)
+            // window.location.href = 'login.html';
+            
+            throw new Error("认证失效，请重新登录");
         }
+
+        // 8. 处理其他错误
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `请求失败: ${response.status}`);
+        }
+
         return await response.json();
-    } catch (e) {
-        console.error("fetchAI error:", e);
-        throw e;
+
+    } catch (error) {
+        console.error(`API Error [${endpoint}]:`, error);
+        throw error;
     }
 }
-
 // ==========================================
 // 3. 业务 API (混合模式)
 // ==========================================
@@ -176,6 +191,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI, alchemyAPI,
     post, get
 };
+
 
 
 
