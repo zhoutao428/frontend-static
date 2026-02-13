@@ -72,6 +72,7 @@ function switchTab(tabName) {
 
 // ============ 加载角色 ============
 async function loadRoles() {
+    console.log('1. loadRoles 开始');
     const grid = document.getElementById('role-grid');
     grid.innerHTML = `
         <div class="loading-state">
@@ -83,17 +84,18 @@ async function loadRoles() {
     try {
         // ✅ 从 window.supabase 获取最新 token
         const { data } = await window.supabase.auth.getSession();
+        console.log('2. getSession 完成', data);
         const token = data.session?.access_token;
 
         const res = await fetch(`${API_BASE}/api/roles`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
-
+        console.log('3. fetch 完成', res.status);
         if (!res.ok) throw new Error('加载失败');
 
         allRoles = await res.json();
         filteredRoles = [...allRoles];
-
+        console.log('4. json 解析完成', allRoles.length);
         document.getElementById('role-count').textContent = allRoles.length;
         document.getElementById('total-count').textContent = `共 ${allRoles.length} 个角色`;
 
