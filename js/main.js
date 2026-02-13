@@ -77,16 +77,62 @@ async function initSystemData() {
         state.allRoles = [];
     } catch(e) { state.allRoles = []; }
 
+    // 1. 先从本地加载（原来的逻辑保留）
+    let localTemplates = [];
     const saved = localStorage.getItem('user_templates');
     if (saved) {
         try {
-            state.templates = JSON.parse(saved);
+            localTemplates = JSON.parse(saved);
         } catch(e) {
-            state.templates = JSON.parse(JSON.stringify(state.defaultTemplates));
+            localTemplates = JSON.parse(JSON.stringify(state.defaultTemplates));
         }
     } else {
-        state.templates = JSON.parse(JSON.stringify(state.defaultTemplates));
+        localTemplates = JSON.parse(JSON.stringify(state.defaultTemplates));
     }
+
+    // 2. 再从云端加载（新增）
+    let cloudTemplates = [];
+    try {
+        const { data } = await window.supabase.auth.getSession();
+        const token = data.session?.access_token;
+        
+        if (token) {
+            const res = await fetch('https://public-virid-chi.vercel.app/api/roles', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const cloud = await res.json();
+                cloudTemplates = cloud.map(role => ({
+                    id: `cloud_${role.id}`,
+                    name: role.name,
+                    description: role.description,
+                    icon: role.icon || 'fa-user',
+                    bgClass: role.bg_class || 'role-dev',
+                    type: 'cloud',
+                    originalId: role.id
+                }));
+            }
+        }
+    } catch (e) {
+        console.warn('云端加载失败', e);
+    }
+
+    // 3. 合并（云端优先，本地后备）
+    const seen = new Set();
+    state.templates = [];
+    
+    // 先加云端的
+    cloudTemplates.forEach(t => {
+        seen.add(t.id);
+        state.templates.push(t);
+    });
+    
+    // 再加本地的（不重复）
+    localTemplates.forEach(t => {
+        if (!seen.has(t.id)) {
+            state.templates.push(t);
+        }
+    });
 }
 
 async function updateUserInfo() {
