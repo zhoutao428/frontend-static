@@ -6,7 +6,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css"> 
     <!-- 必须加这行！否则炼丹炉无法获取最新 Token -->
+    <!-- 必须加这行！否则炼丹炉无法获取最新 Token -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ✅ 新增：初始化 Supabase 客户端 (给 api.js 用) -->
+    <script>
+    // 你的 Supabase 配置 (必须填入正确的 Key)
+    const SUPABASE_URL = 'https://uispjsahipixbocvfdrg.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'; // 你的 Anon Key
+
+    // 创建客户端并挂载到全局变量 window.supabase
+    window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log("✅ Supabase SDK 已就绪 (工作流工厂)");
+</script>
+
 </head>
 <body>
     <!-- 顶部控制栏 -->
@@ -247,6 +260,7 @@
 </body>
 
 </html>
+
 
 
 
