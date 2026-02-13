@@ -9,12 +9,27 @@ import { loadSavedWorkflows, loadWorkflowToStage } from './workflow-manager.js';
 import { createRoleCard, getRoleMeta } from './role-utils.js';
 import { renderSidebar, renderRootView, renderDetailView, createTemplateCard } from './sidebar-renderer.js';
 import { renderHoloDeck, removeRoleFromGroup, moveRoleToGroup } from './holo-deck.js';
-// 你的 Supabase 配置 (和 login.js 保持一致)
-const SUPABASE_URL = 'https://uispjsahipixbocvfdrg.supabase.co'; 
-const SUPABASE_KEY = 'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'; // 你的 Key
+// 1. 初始化 Supabase
+// ✅ 修复：直接复用 index.html 已经初始化好的实例
+let supabase = window.supabase;
 
-// 初始化客户端
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// 防御性代码：万一 index.html 没覆盖成功，这里再尝试手动兜底
+if (supabase && typeof supabase.createClient === 'function') {
+    const SUPABASE_URL = 'https://uispjsahipixbocvfdrg.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9';
+    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+if (!supabase || !supabase.auth) {
+    console.warn("⚠️ Supabase 客户端未就绪，请检查 index.html");
+}
+
+// 2. 获取有效 Token (自动刷新)
+async function getValidToken() {
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || null;
+}
 
 // ✅ 新增：获取有效 Token 的函数 (会自动刷新)
 async function getValidToken() {
