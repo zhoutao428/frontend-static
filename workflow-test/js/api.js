@@ -2,7 +2,7 @@
 // 1. 地址配置 (根据你的实际端口)
 // ==========================================
 const PYTHON_BACKEND = 'http://localhost:8000';    // 原后台 (Roles, Projects)
-const NEXTJS_BACKEND = 'https://public-virid-chi.vercel.app/api'; 
+const API_BASE_URL = 'https://public-virid-chi.vercel.app/api'; // 必须是新后台地址
 
 // ==========================================
 // 2. 核心请求工具
@@ -17,48 +17,73 @@ function handleErrorResponse(response) {
 }
 
 // --- 工具 A: 访问 Python 后台 (带 Token) ---
-// 请求 AI 后台 (修改版)
+// 核心请求工具 (修复版)
 async function fetchAI(endpoint, options = {}) {
-    const url = `${NEXTJS_BACKEND}${endpoint}`;
-    
-    // 1. 准备基础 Header
+    // 1. 获取最新 Token
+    let token = null;
+
+    // A. 尝试通过 Supabase SDK 获取 (优先)
+    // 注意：确保 alchemy.html 里也引入了 supabase-js SDK！
+    if (window.supabase) {
+        try {
+            const { data } = await window.supabase.auth.getSession();
+            token = data.session?.access_token;
+        } catch (e) {
+            console.warn("SDK获取Session失败", e);
+        }
+    }
+
+    // B. 本地兜底
+    if (!token) {
+        token = localStorage.getItem('user_token');
+    }
+
+    // 2. 构造 URL
+    const url = `${API_BASE_URL}${endpoint}`;
+
+    // 3. 构造 Headers
     const headers = { 
         'Content-Type': 'application/json',
         ...options.headers 
     };
 
-    // 2. 检查用户本地是否有 DeepSeek Key
-    const userKey = localStorage.getItem('deepseek_api_key'); 
-    
-    if (userKey) {
-        // 优先使用用户自定义 Key
-        headers['X-Custom-Api-Key'] = userKey;
-        console.log("正在使用用户自定义 Key 发送请求...");
+    // 4. ✅ 关键修复：带上 Token！
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
     } else {
-        // 没有自定义 Key，使用平台账号（必须带登录 Token）
-        console.log("使用平台付费通道...");
-        const token = localStorage.getItem('user_token');
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-            console.log("已携带登录 Token");
-        } else {
-            console.warn("未登录且无自定义 Key，请求可能会返回 401");
+        console.warn(`[炼丹炉] 未登录，请求 ${endpoint} 可能会失败 (401)`);
+    }
+
+    // 5. 检查自定义 Key (用于 Chat)
+    const userCustomKey = localStorage.getItem('deepseek_api_key');
+    if (userCustomKey && endpoint.includes('/chat')) {
+        headers['X-Custom-Api-Key'] = userCustomKey;
+    }
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: headers
+        });
+
+        if (response.status === 401) {
+            console.error("炼丹炉认证失效");
+            // localStorage.removeItem('user_token'); // 可选：是否强制登出
+            throw new Error("认证失效，请重新登录主系统");
         }
-    }
 
-    // 3. 发送请求
-    const response = await fetch(url, {
-        credentials: 'include', 
-        headers: headers,
-        ...options
-    });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `请求失败: ${response.status}`);
+        }
 
-    if (!response.ok) {
-        throw new Error(`AI后台报错: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Alchemy API Error [${endpoint}]:`, error);
+        throw error;
     }
-    
-    return await response.json();
 }
+
 // ==========================================
 // 3. 业务 API 分流
 // ==========================================
@@ -145,6 +170,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI,alchemyAPI,
     post, get
 };
+
 
 
 
