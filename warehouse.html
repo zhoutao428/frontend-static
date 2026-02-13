@@ -56,7 +56,23 @@
             </div>
         </div>
     </div>
+     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <!-- ✅ 2. 初始化 Supabase (给后面的 warehouse.js 用) -->
+    <script>
+        const SUPABASE_URL = 'https://uispjsahipixbocvfdrg.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'; // 你的 Key
+
+        if (window.supabase) {
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            window.supabase = window.supabaseClient; // 挂载给全局
+            console.log("✅ Supabase SDK 已就绪 (仓库)");
+        } else {
+            console.error("❌ SDK 加载失败");
+        }
+    </script>
+
+    <!-- ✅ 3. 引入业务脚本 -->
     <script type="module" src="/js/api.js"></script><!-- 引入仓库JS -->
     <script src="./warehouse.js"></script>
 </body>
