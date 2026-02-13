@@ -67,8 +67,8 @@ function switchTab(tabName) {
     const searchInput = document.getElementById('search-input');
     const totalCount = document.getElementById('total-count');
     // 从 window.supabase 获取最新的 token
-    const { data: { session } } = await window.supabase.auth.getSession();
-    const token = session?.access_token;
+    window.supabase.auth.getSession().then(({ data }) => {
+    const token = data.session?.access_token;
 
     const res = await fetch(`${API_BASE}/api/roles`, {
     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
