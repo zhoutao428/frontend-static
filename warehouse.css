@@ -109,12 +109,6 @@
 /* 网格容器 - 完全复用工厂，仅调整内边距 */
 .warehouse-grid {
     flex: 1;
-    min-height: 0;
-    margin-bottom: 0;
-    padding-bottom: 24px;
-}
-.warehouse-grid {
-    flex: 1;
     min-height: 0;          /* ✅ 允许收缩 */
     overflow-y: auto;        /* ✅ 超出滚动 */
     margin-bottom: 0;
