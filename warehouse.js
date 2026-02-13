@@ -72,6 +72,20 @@ function switchTab(tabName) {
 
 // ============ 加载角色 ============
 async function loadRoles() {
+     let session = null;
+    for (let i = 0; i < 10; i++) {
+        const { data } = await window.supabase.auth.getSession();
+        if (data.session) {
+            session = data.session;
+            break;
+        }
+        await new Promise(r => setTimeout(r, 200)); // 等 200ms 再试
+    }
+    
+    if (!session) {
+        console.warn('未登录，无法加载角色');
+        return;
+    }
     console.log('1. loadRoles 开始');
     const grid = document.getElementById('role-grid');
     grid.innerHTML = `
