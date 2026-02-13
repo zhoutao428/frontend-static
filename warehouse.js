@@ -67,12 +67,15 @@ function switchTab(tabName) {
     const searchInput = document.getElementById('search-input');
     const totalCount = document.getElementById('total-count');
     // 从 window.supabase 获取最新的 token
-    window.supabase.auth.getSession().then(({ data }) => {
-    const token = data.session?.access_token;
-
-    const res = await fetch(`${API_BASE}/api/roles`, {
-    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-});
+    async function loadRoles() {
+    try {
+        // ✅ 在这里拿 token
+        const { data } = await window.supabase.auth.getSession();
+        const token = data.session?.access_token;
+        
+        const res = await fetch(`${API_BASE}/api/roles`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
     if (tabName === 'roles') {
         searchInput.placeholder = '搜索角色、技能或标签...';
         totalCount.textContent = `共 ${filteredRoles.length} 个角色`;
