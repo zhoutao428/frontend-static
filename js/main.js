@@ -83,28 +83,27 @@ async function initSystemData() {
 
 async function updateUserInfo() {
     try {
-        // 1. 从本地获取 Token (登录时存进去的)
+        // 1. 从本地获取 Token
         const token = await getValidToken();
-        
-        // 如果没 token，说明肯定没登录，直接跳过请求
+
+        // 如果没 token，直接跳过
         if (!token) return;
 
-        // 2. 发送请求 (把 Token 放在 Header 里传过去)
+        // 2. 发送请求
         const res = await fetch('https://public-virid-chi.vercel.app/api/user/info', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // 👈 关键！手动带上令牌
+                'Authorization': `Bearer ${token}`
             }
         });
-
 
         const loginBtn = document.getElementById('login-btn');
         const userPanel = document.getElementById('user-logged-in');
 
-        // ✅ 2. 统一使用变量名 res (原来报错的地方)
+        // 3. 处理响应
         if (res.ok) {
-            const data = await res.json(); // 👈 这里也要改
+            const data = await res.json();
 
             if(loginBtn) loginBtn.style.display = 'none';
             if(userPanel) userPanel.style.display = 'flex';
@@ -123,28 +122,25 @@ async function updateUserInfo() {
                 logoutBtn.onclick = async (e) => {
                     e.preventDefault();
                     if(confirm('确定退出吗？')) {
-                        // 建议加个登出接口调用
-                        // await fetch('https://public-virid-chi.vercel.app/api/auth/signout', { method: 'POST' });
                         localStorage.removeItem('user_token');
-                        // ✅ 修复登出跳转地址 (直接跳转到同域下的 login.html)
                         window.location.href = 'login.html'; 
                     }
                 };
             }
         } else {
-            // 如果 Token 过期了 (401)，可以强制登出
-             if (res.status === 401) {
-             console.warn("Token失效且无法刷新，强制登出");
-             localStorage.removeItem('user_token');
-             // supabase.auth.signOut(); // 最好也调一下 SDK 的登出
-             // window.location.href = 'login.html'; 
-        }
-
-    } catch (e) {
+            // 处理 401 未登录
+            if (res.status === 401) {
+                 console.warn("Token失效且无法刷新，强制登出");
+                 localStorage.removeItem('user_token');
+                 // window.location.href = 'login.html'; 
+            }
+        } // ✅ 补上这个：闭合 else
+    } // ✅ 补上这个：闭合 try
+    catch (e) {
         console.warn("用户状态加载失败", e);
     }
 }
-
+wo
 async function initModelSelector() {
     const select = document.getElementById('global-model-select');
     if (!select) return;
