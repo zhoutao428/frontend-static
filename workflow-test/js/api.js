@@ -1,3 +1,10 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+    'https://uispjsahipixbocvfdrg.supabase.co',
+    'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'
+);
+console.log("✅ Supabase SDK 已就绪 (api.js 自托管)");
 // ==========================================
 // 1. 地址配置 (根据你的实际端口)
 // ==========================================
@@ -170,6 +177,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI,alchemyAPI,
     post, get
 };
+
 
 
 
