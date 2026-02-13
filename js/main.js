@@ -342,7 +342,7 @@ window.addEventListener('storage', (e) => {
 
 // 页面启动时读取已取用的角色
 function loadTempRolesFromWarehouse() {
-    const tempRoles = JSON.parse(sessionStorage.getItem('workspace_temp_roles') || '[]');
+    const tempRoles = JSON.parse(localStorage.getItem('workspace_temp_roles') || '[]');
     if (tempRoles.length > 0 && window.state) {
         // 合并到 templates 中显示
         tempRoles.forEach(role => {
