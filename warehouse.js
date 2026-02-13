@@ -66,7 +66,13 @@ function switchTab(tabName) {
     // 更新标题和搜索占位符
     const searchInput = document.getElementById('search-input');
     const totalCount = document.getElementById('total-count');
-    
+    // 从 window.supabase 获取最新的 token
+    const { data: { session } } = await window.supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const res = await fetch(`${API_BASE}/api/roles`, {
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+});
     if (tabName === 'roles') {
         searchInput.placeholder = '搜索角色、技能或标签...';
         totalCount.textContent = `共 ${filteredRoles.length} 个角色`;
