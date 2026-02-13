@@ -140,7 +140,6 @@ async function updateUserInfo() {
         console.warn("用户状态加载失败", e);
     }
 }
-wo
 async function initModelSelector() {
     const select = document.getElementById('global-model-select');
     if (!select) return;
