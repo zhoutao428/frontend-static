@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>AI Workbench Pro</title>
-    <!-- 引入 FontAwesome 图标库 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- 1. 样式库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 引入 Google Fonts 字体 -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- 引入我们的样式文件 -->
     <link rel="stylesheet" href="./styles.css">
-    <!-- 模型选择器样式 -->
+
+    <!-- 2. 内联样式 (模型选择器) -->
     <style>
         .model-selector-wrapper {
             display: flex; align-items: center; gap: 8px; 
-            background: rgba(99, 102, 241, 0.1); /* 紫色背景区分 */
+            background: rgba(99, 102, 241, 0.1);
             padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.3);
             margin-left: 10px;
         }
@@ -23,132 +24,147 @@
         }
         #global-model-select option { background: #1e1b4b; color: white; }
     </style>
+    
+    <!-- ✅ 3. 引入 Supabase SDK (必须放在 Head 里或者 Body 最上面) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- ✅ 4. 初始化 Supabase (这一步最关键！) -->
+    <script>
+        const SUPABASE_URL = 'https://uispjsahipixbocvfdrg.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_qgH5KWfpLwYRpdCDmdVoTQ_6tAl3pG9'; // 你的 Key
+        
+        // 初始化客户端并挂载到 window
+        if (window.supabase) {
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            
+            // 为了兼容 api.js 的写法 (window.supabase.auth...)
+            // 我们把 createClient 的原始对象覆盖回去，或者是做一个代理
+            // 最稳妥的写法是：让 window.supabase 指向 client 实例
+            window.supabase = window.supabaseClient;
+            
+            console.log("✅ Supabase SDK 已就绪 (Index)");
+        } else {
+            console.error("❌ SDK 加载失败，请检查网络");
+        }
+    </script>
 </head>
+
 <body>
     <!-- === 顶部导航栏 === -->
     <header class="top-bar">
-    <!-- 1. 左侧：品牌与项目 -->
-    <div class="left-section">
-        <div class="brand">
-            <i class="fas fa-network-wired"></i>
-            <span class="brand-text">Workbench</span>
+        <!-- 左侧：品牌与项目 -->
+        <div class="left-section">
+            <div class="brand">
+                <i class="fas fa-network-wired"></i>
+                <span class="brand-text">Workbench</span>
+            </div>
+            <div class="divider-v"></div>
+            
+            <!-- 项目控制 -->
+            <div class="project-controls">
+                <div class="select-wrapper">
+                    <i class="fas fa-cube"></i>
+                    <select id="global-project-select">
+                        <option value="">加载中...</option>
+                    </select>
+                </div>
+                <button class="btn-icon-only" id="btn-new-project" title="新建云端项目">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="btn-icon-only" id="btn-open-local" title="挂载本地代码">
+                    <i class="fas fa-folder-open"></i>
+                </button>
+            </div>
         </div>
-        <div class="divider-v"></div>
-        
-        <!-- 项目控制 -->
-        <div class="project-controls">
-            <div class="select-wrapper">
-                <i class="fas fa-cube"></i>
-                <select id="global-project-select">
-                    <option value="">加载中...</option>
+
+        <!-- 中间：模型控制 -->
+        <div class="center-section">
+            <div class="model-selector-wrapper">
+                <i class="fas fa-microchip"></i>
+                <select id="global-model-select">
+                    <option disabled>加载模型...</option>
                 </select>
             </div>
-            <button class="btn-icon-only" id="btn-new-project" title="新建云端项目">
-                <i class="fas fa-plus"></i>
-            </button>
-            <button class="btn-icon-only" id="btn-open-local" title="挂载本地代码">
-                <i class="fas fa-folder-open"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- 2. 中间：模型控制 (C位) -->
-    <div class="center-section">
-        <div class="model-selector-wrapper">
-            <i class="fas fa-microchip"></i>
-            <select id="global-model-select">
-                <option disabled>加载模型...</option>
-            </select>
-        </div>
-    </div>
-
-        <!-- 右侧全局控制 (New Layout) -->
-    <div class="right-section top-controls">
-        
-        <!-- 1. 视图切换 -->
-        <button class="btn-icon-text" id="view-mode-btn" title="切换视图">
-            <i class="fas fa-th-large"></i> 九宫格
-        </button>
-
-        <div class="divider-v"></div>
-
-        <!-- 2. 功能中心 (使用新的 dropdown-trigger 结构) -->
-        <div class="dropdown-trigger">
-            <button class="btn-icon-text" id="features-btn">
-                <i class="fas fa-cube"></i> 功能中心
-            </button>
-            
-            <!-- 下拉菜单 (使用新的 user-menu 样式风格，或者保持原样) -->
-            <div id="features-menu" class="dropdown-menu" style="min-width: 200px;">
-                <div class="menu-header">
-                    <div style="font-weight:bold; color:white;">功能中心</div>
-                </div>
-                <div class="menu-divider"></div>
-                
-                <a href="workflow-test/workflow-factory-test.html" class="menu-item">
-                    <i class="fas fa-user-tie"></i> 角色管理
-                </a>
-                <a href="workflows/workflow-center.html" class="menu-item">
-                    <i class="fas fa-sitemap"></i> 🚀 工作流中心
-                </a>
-                <a href="warehouse.html" class="menu-item">
-                    <i class="fas fa-brain"></i> 角色仓库
-                </a>
-            </div>
         </div>
 
-        <div class="divider-v"></div>
-
-        <!-- 3. 用户个人中心 (把原来的登录按钮换成这个) -->
-        <div id="user-profile-area" class="user-profile-wrapper">
-            <!-- 未登录 -->
-            <button id="login-btn" class="btn-primary-glow" onclick="window.location.href='login.html'">
-                登录 / 注册
+        <!-- 右侧：全局控制 -->
+        <div class="right-section top-controls">
+            <!-- 视图切换 -->
+            <button class="btn-icon-text" id="view-mode-btn" title="切换视图">
+                <i class="fas fa-th-large"></i> 九宫格
             </button>
+            <div class="divider-v"></div>
 
-            <!-- 已登录 -->
-            <div id="user-logged-in" class="user-pill" style="display:none;">
-                <div class="balance-tag" onclick="window.open((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/billing', '_blank')"
-                    <i class="fas fa-coins"></i> <span id="user-balance">--</span>
-                </div>
-                <div class="avatar-trigger" id="avatar-btn">
-                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
-                </div>
-                
-                <!-- 用户菜单 -->
-                <div class="dropdown-menu user-menu" id="user-menu">
+            <!-- 功能中心 -->
+            <div class="dropdown-trigger">
+                <button class="btn-icon-text" id="features-btn">
+                    <i class="fas fa-cube"></i> 功能中心
+                </button>
+                <div id="features-menu" class="dropdown-menu" style="min-width: 200px;">
                     <div class="menu-header">
-                        <div class="user-name" id="user-name-display">Guest</div>
-                        <div class="user-email" id="user-email-display">...</div>
+                        <div style="font-weight:bold; color:white;">功能中心</div>
                     </div>
                     <div class="menu-divider"></div>
-                    <a href="http://localhost:3001/billing" target="_blank" class="menu-item">
-                        <i class="fas fa-credit-card"></i> 我的账单
+                    <!-- 修复链接路径 -->
+                    <a href="workflow-test/workflow-factory-test.html" class="menu-item">
+                        <i class="fas fa-user-tie"></i> 角色管理
                     </a>
-                    <a href="config.html" class="menu-item">
-                        <i class="fas fa-key"></i> 自定义 Key
+                    <a href="workflows/workflow-center.html" class="menu-item">
+                        <i class="fas fa-sitemap"></i> 🚀 工作流中心
                     </a>
-                    <div class="menu-divider"></div>
-                    <a href="#" id="logout-btn" class="menu-item danger">
-                        <i class="fas fa-sign-out-alt"></i> 退出登录
+                    <a href="warehouse.html" class="menu-item">
+                        <i class="fas fa-brain"></i> 角色仓库
                     </a>
                 </div>
             </div>
-        </div>
-    </div>
-</header>
-    <!-- === 主工作区 (Flex布局) === -->
-    <div class="workspace">
-        
-        <!-- 左侧：智能体列表 (侧边栏) -->
-        <aside class="sidebar" id="sidebar-area">
-            <!-- 侧边栏内容已清空，将由JavaScript动态生成 -->
-        </aside>
+            <div class="divider-v"></div>
 
-        <!-- 右侧：主舞台 (承载窗口) -->
+            <!-- 用户个人中心 -->
+            <div id="user-profile-area" class="user-profile-wrapper">
+                <!-- 未登录 -->
+                <button id="login-btn" class="btn-primary-glow" onclick="window.location.href='login.html'">
+                    登录 / 注册
+                </button>
+
+                <!-- 已登录 -->
+                <div id="user-logged-in" class="user-pill" style="display:none;">
+                    <div class="balance-tag">
+                        <i class="fas fa-coins"></i> <span id="user-balance">--</span>
+                    </div>
+                    <div class="avatar-trigger" id="avatar-btn">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
+                    </div>
+                    
+                    <!-- 用户菜单 -->
+                    <div class="dropdown-menu user-menu" id="user-menu">
+                        <div class="menu-header">
+                            <div class="user-name" id="user-name-display">Guest</div>
+                            <div class="user-email" id="user-email-display">...</div>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <!-- 修复死链 -->
+                        <a href="javascript:alert('账单功能开发中')" class="menu-item">
+                            <i class="fas fa-credit-card"></i> 我的账单
+                        </a>
+                        <a href="config.html" class="menu-item">
+                            <i class="fas fa-key"></i> 自定义 Key
+                        </a>
+                        <div class="menu-divider"></div>
+                        <a href="#" id="logout-btn" class="menu-item danger">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- === 主工作区 === -->
+    <div class="workspace">
+        <aside class="sidebar" id="sidebar-area">
+            <!-- 侧边栏内容由 JS 生成 -->
+        </aside>
         <main class="stage" id="main-stage">
-            <!-- 这里的内容将由 JS 动态从 hidden-pool 中搬运过来 -->
-            <!-- 默认只显示一个窗口 -->
             <div class="empty-state" style="display:none;">
                 <i class="fas fa-layer-group"></i>
                 <p>从左侧拖拽智能体到此处开始协作</p>
@@ -176,26 +192,21 @@
         </div>
     </div>
 
-    <!-- === 隐藏的窗口池 (空的容器，JS将动态插入窗口) === -->
-    <div id="windows-pool" style="display:none;">
-        <!-- 窗口池已清空，将由JavaScript动态生成窗口内容 -->
-    </div>
+    <!-- === 窗口池 (隐藏) === -->
+    <div id="windows-pool" style="display:none;"></div>
 
-    <!-- === 通用输入模态框 (最终版) === -->
+    <!-- === 模态框 === -->
     <div id="custom-modal" class="modal-backdrop" style="display:none;">
         <div class="modal-panel">
             <div class="modal-header">
                 <h3 id="modal-title">请输入</h3>
-                <!-- 关闭按钮 -->
                 <button class="btn-icon-only" id="btn-close-modal">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
             <div class="modal-body" style="padding: 20px 0;">
                 <input type="text" id="modal-input" class="modal-input" autocomplete="off">
             </div>
-
             <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
                 <button class="btn btn-ghost" id="btn-cancel-modal">取消</button>
                 <button class="btn btn-primary-glow" id="modal-confirm">确定</button>
@@ -203,33 +214,31 @@
         </div>
     </div>
 
-    <!-- 引用逻辑脚本 -->
-    <script type="module" src="./js/main.js"></script>
+    <!-- ✅ 5. 引入业务脚本 (Strict Order) -->
+    <!-- 注意：不要重复引用 main.js (原代码引用了两次) -->
+    
     <script src="./js/warehouse-bridge.js"></script>
+    
+    <!-- 这里使用 type="module" 是因为 ui.js 和 main.js 里用了 import/export -->
+    <!-- api.js 不需要显式引入，因为 main.js 内部会 import 它 -->
+    <script type="module" src="./js/ui.js"></script>
+    <script type="module" src="./js/main.js"></script>
+    
+    <!-- 临时脚本 (可保留也可放入 main.js) -->
     <script>
-        // 功能中心新增功能的临时实现
+        // 定义全局变量以兼容旧代码
+        window.API_BASE_URL = 'https://public-virid-chi.vercel.app/api';
+
         function startContentWorkflow() {
             console.log('🚀 启动一键内容创作工作流');
-            // 关闭功能菜单
             document.getElementById('features-menu').style.display = 'none';
-            
-            // 这里可以添加更复杂的逻辑，比如：
-            // 1. 创建专门的内容创作智能体
-            // 2. 打开专用工作区
-            // 3. 加载预设模板等
-            
-            alert('🎬 一键内容创作工作流已启动！\n\n此功能将引导您完成：\n1. 内容主题选择\n2. 风格设定\n3. 多智能体协同创作\n4. 内容优化与发布');
+            alert('🎬 一键内容创作工作流已启动！');
         }
-
         function startDataAnalysisWorkflow() {
             console.log('📊 启动数据分析工作流');
-            // 关闭功能菜单
             document.getElementById('features-menu').style.display = 'none';
-            
-            // 这里可以添加更复杂的逻辑
-            alert('📈 数据分析工作流已启动！\n\n此功能将引导您完成：\n1. 数据源连接\n2. 数据清洗\n3. 分析模型选择\n4. 可视化呈现');
+            alert('📈 数据分析工作流已启动！');
         }
-        window.API_BASE_URL = '/api';
     </script>
 </body>
 </html>
