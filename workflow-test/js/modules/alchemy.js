@@ -272,52 +272,6 @@ export async function startAIAlchemy(roleItem, modelItem) {
     }
 }
 
-function saveToLocal(role) {
-    // 1. 生成本地 ID (如果还没有)
-    if (!role.id || !role.id.startsWith('local_')) {
-        role.id = `local_${Date.now()}`;
-    }
-    
-    role.is_local = true;
-    role.role_type = 'user'; // 标记为用户自制
-    role.is_deletable = true; // 允许删除
-
-    // 2. 存入 LocalStorage
-    let localRoles = [];
-    try {
-        localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-    } catch(e) { localRoles = []; }
-
-    // 把新角色插到最前面
-    localRoles.unshift(role);
-    localStorage.setItem('user_templates', JSON.stringify(localRoles));
-    
-    console.log(`✅ [Save] 角色 ${role.name} 已保存到本地`);
-
-    // 3. 核心：立即刷新左侧列表 UI
-    // 尝试调用各种可能的刷新方法 (兼容不同版本代码)
-    if (window.RolePartsLibrary) {
-        // 如果有 loadUserRoles 方法 (新版)
-        if (typeof window.RolePartsLibrary.loadUserRoles === 'function') {
-            window.RolePartsLibrary.loadUserRoles();
-        } 
-        // 如果没有，尝试直接添加到 userParts (旧版)
-        else if (window.RolePartsLibrary.userParts && window.RolePartsLibrary.userParts.add) {
-            window.RolePartsLibrary.userParts.add(role);
-            if (window.RolePartsLibrary.userParts.render) {
-                window.RolePartsLibrary.userParts.render();
-            }
-        }
-    }
-    
-    // 如果有全局刷新函数
-    if (typeof window.renderPartsGrid === 'function') {
-        window.renderPartsGrid();
-    }
-
-    // 4. 提示用户
-    showToast(`🎉 炼制完成！角色 [${role.name}] 已加入左侧列表`);
-}
 
 
 export async function callRealAIForEnhancement(roleInfo, modelId) {
@@ -871,6 +825,7 @@ function saveToLocal(role) {
     
     showToast(`✅ 角色 [${role.name}] 已存入本地`);
 }
+
 
 
 
