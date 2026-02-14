@@ -178,64 +178,9 @@ function renderRoles() {
         return;
     }
 
-     grid.innerHTML = filteredRoles.map(role => {
-        // 1. 严格判定系统角色 (只有 role_type 是 system 才是官方的)
-        // 兼容旧数据：如果 role.type 是 system 且它是云端角色 (is_cloud)，也算官方
-        const isSystem = role.role_type === 'system' || (role.is_cloud && role.type === 'system');
-
-        // 2. 判定是否显示删除按钮
-        // 只要不是系统角色，或者明确标记为可删除 (is_deletable)，就可以删
-        // 注意：本地角色 (is_local) 永远可删
-        const canDelete = !isSystem || role.is_local;
-
-        const badgeHtml = isSystem
-            ? `<span class="role-badge prebuild" style="background:#4f46e5; padding:2px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-star"></i> 官方</span>`
-            : `<span class="role-badge user" style="background:#10b981; padding:2px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-user"></i> 自制</span>`;
-
-        const deleteBtn = canDelete
-            ? `<button class="btn-icon danger" onclick="deleteRole('${role.id}', event)" title="删除" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>`
-            : '';
-
-        const expertise = Array.isArray(role.expertise) ? role.expertise : [];
-        const tagsHtml = expertise.slice(0, 3).map(tag =>
-            `<span class="tag">${tag}</span>`
-        ).join('');
-
-        const icon = role.icon || 'fa-user';
-        const bgClass = role.bg_class || 'role-dev'; // 确保 CSS 里有对应的颜色类
-
-        return `
-            <div class="part-card" data-role-id="${role.id}" onclick="showRoleDetail(${role.id})">
-                <div class="part-header">
-                    <div class="part-icon ${bgClass}">
-                        <i class="fas ${icon}"></i>
-                    </div>
-                    <div class="part-info" style="flex:1; margin-left:10px;">
-                        <div class="part-name" style="font-weight:bold;">${role.name || '未命名'}</div>
-                        <div class="part-desc" style="font-size:12px; color:#9ca3af; margin-top:2px;">${role.description ? role.description.substring(0, 20) + '...' : '暂无描述'}</div>
-                    </div>
-                    <div>${badgeHtml}</div>
-                </div>
-                
-                <div class="part-tags" style="margin-top:10px; display:flex; gap:4px; flex-wrap:wrap;">
-                    ${tagsHtml}
-                    ${expertise.length > 3 ? `<span class="tag">+${expertise.length - 3}</span>` : ''}
-                </div>
-
-                <div class="part-footer" style="margin-top:15px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                    <span style="font-size:11px; color:#6b7280;">ID: ${role.id}</span>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn-take" onclick="takeRole(${role.id}, '${role.name}', event)" style="padding:4px 10px; background:#4f46e5; border:none; border-radius:4px; color:white; cursor:pointer;">
-                            <i class="fas fa-plus"></i> 放入工作台
-                        </button>
-                        ${deleteBtn}
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
+      // ✅ 一行代码搞定渲染！调用刚才写的 createRoleCardHTML
+    grid.innerHTML = filteredRoles.map(role => createRoleCardHTML(role)).join('');
 }
-
 // ============ 取用角色 ============
 window.takeRole = function(roleId, roleName, event) {
     event && event.stopPropagation();
