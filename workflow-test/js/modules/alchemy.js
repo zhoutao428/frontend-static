@@ -95,26 +95,28 @@ export async function startAIAlchemy(roleItem, modelItem) {
         return;
     }
 
+    // 1. 提取名字和ID
     const roleId = roleItem.dataset.id || roleItem.getAttribute('data-id');
-    const roleName = roleItem.querySelector('.part-name')?.innerText.trim();
+    const roleName = roleItem.querySelector('.part-name')?.innerText.trim() || "未知角色";
     const modelId = modelItem.dataset.id || modelItem.getAttribute('data-id');
     const modelName = modelItem.querySelector('.part-name')?.innerText.trim() || "AI模型";
 
+    // 2. ⚠️ 必须先定义 rawRole！
+    const rawRole = {
+        id: roleId,
+        name: roleName,
+        description: roleItem.querySelector('.part-desc')?.innerText || "",
+        icon: roleItem.querySelector('.part-icon i')?.className.replace('fas ', '') || "fa-user"
+    };
+
     console.log(`🔥 启动炼丹: ${roleName} + ${modelName}`);
 
-    // --- B. 锁定状态 & 启动动画 ---
-    if (window.alchemyState) {
-        window.alchemyState.isProcessing = true;
-    }
-    
-     if (window.AlchemyAnimation) {
-        // ✅ 必须调用新方法名 startAlchemy，并传入两个对象
+    // 3. 然后再启动动画 (因为动画需要 rawRole.icon)
+    if (window.AlchemyAnimation) {
         window.AlchemyAnimation.startAlchemy(
-            { name: roleName, icon: rawRole.icon || 'fa-user' }, // 参数1: 角色数据
-            { name: modelName, id: modelId }                     // 参数2: 模型数据
+            { name: roleName, icon: rawRole.icon }, // 👈 这里用了 rawRole
+            { name: modelName }
         );
-        
-        // 顺便设置初始状态
         if (window.AlchemyAnimation.setStatus) {
             window.AlchemyAnimation.setStatus(`正在接入 ${modelName}...`);
         }
@@ -783,6 +785,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
