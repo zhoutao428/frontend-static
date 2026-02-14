@@ -11,19 +11,34 @@ export function initDropZone() {
     if (furnace) {
         furnace.addEventListener('dragover', (e) => { e.preventDefault(); furnace.classList.add('drag-over'); });
         furnace.addEventListener('dragleave', () => furnace.classList.remove('drag-over'));
-        furnace.addEventListener('drop', (e) => {
+         furnace.addEventListener('drop', (e) => {
             e.preventDefault();
             e.stopPropagation(); 
             furnace.classList.remove('drag-over');
             
+            // 优先从全局取 (因为同页面拖拽)
+            // 此时 item 已经是包含 {id, name, icon} 的完整对象了
             const item = window.draggedItem;
             const type = window.draggedType;
+
             if (!item || !type) return;
             
             console.log('放入炉子:', type, item);
+
             if (!window.alchemyState) window.alchemyState = { materials: [] };
-            window.alchemyState.materials.push({ type: type, id: item, timestamp: Date.now() });
             
+            // 🚨 关键：存入 alchemyState 时，确保把 name 拷进去！
+            // 如果 item 是对象，直接解构；如果是 ID 字符串，就没名字了
+            const materialData = { 
+                type: type, 
+                timestamp: Date.now(),
+                // 兼容逻辑：
+                id: item.id || item, 
+                name: item.name || (type === 'role' ? getRoleName(item) : getModelName(item)),
+                icon: item.icon || (type === 'role' ? 'fas fa-user' : 'fas fa-cube')
+            };
+
+            window.alchemyState.materials.push(materialData);
             // === 👇 直接内联更新 UI (替代函数调用) ===
             const count = window.alchemyState.materials.length;
             const p = furnace.querySelector('p') || furnace;
@@ -170,4 +185,3 @@ export function bindModelToRole(roleId, modelId) {
     renderGroups();
     log(`绑定: ${roleId} → ${modelId}`);
 }
-
