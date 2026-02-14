@@ -303,6 +303,83 @@ window.showRoleDetail = function(roleId) {
         // 这里可以弹窗显示详情，暂时只 log
     }
 }
+// ============ 通用卡片渲染器 (复刻工厂样式) ============
+function createRoleCardHTML(role) {
+    // 1. 判定身份
+    // 兼容旧数据: role_type='system' 或 is_cloud=true 且没标记 local
+    const isSystem = role.role_type === 'system' || (role.is_cloud && !role.is_local);
+    const canDelete = !isSystem || role.is_local || role.is_deletable;
+
+    // 2. 徽章
+    const badgeHtml = isSystem
+        ? `<span class="role-badge prebuild" style="background:#4f46e5; padding:2px 6px; border-radius:4px; font-size:10px; color:white;"><i class="fas fa-star"></i> 官方</span>`
+        : `<span class="role-badge user" style="background:#10b981; padding:2px 6px; border-radius:4px; font-size:10px; color:white;"><i class="fas fa-user"></i> 自制</span>`;
+
+    // 3. 标签
+    const tags = role.expertise || role.tags || [];
+    const tagsHtml = tags.slice(0, 3).map(t => 
+        `<span class="tag" style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:10px; margin-right:4px;">${t}</span>`
+    ).join('');
+
+    // 4. 按键 (Actions) - 这就是你想要的！
+    let actionsHtml = '';
+    if (role.actions && role.actions.length > 0) {
+        actionsHtml = `<div class="role-actions" style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+            ${role.actions.map(act => `
+                <button class="action-btn" onclick="event.stopPropagation(); alert('模拟执行: ${act.label}')" 
+                        style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#e0e7ff; font-size:11px; padding:4px 8px; border-radius:4px; cursor:pointer;">
+                    <i class="fas fa-bolt"></i> ${act.label}
+                </button>
+            `).join('')}
+        </div>`;
+    }
+
+    // 5. 删除按钮
+    const deleteBtn = canDelete
+        ? `<button class="btn-icon danger" onclick="deleteRole('${role.id}', event)" title="删除" 
+                   style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px;">
+               <i class="fas fa-trash-alt"></i>
+           </button>`
+        : '';
+
+    // 6. 样式类
+    const bgClass = role.bg_class || 'role-dev'; // 确保 CSS 里有这个类
+    const icon = role.icon || 'fa-user';
+
+    // 7. 返回 HTML
+    return `
+        <div class="part-card role-card" data-role-id="${role.id}" onclick="showRoleDetail('${role.id}')"
+             style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:16px; transition:all 0.2s; cursor:pointer; position:relative; overflow:hidden;">
+            
+            <div class="part-header" style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                <div class="part-icon ${bgClass}" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(99,102,241,0.2); color:#818cf8; font-size:20px;">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="part-info" style="flex:1;">
+                    <div class="part-name" style="font-weight:bold; color:white; font-size:16px;">${role.name}</div>
+                    <div class="part-desc" style="font-size:12px; color:#94a3b8; margin-top:2px;">${role.description?.substring(0, 20) || '暂无描述'}...</div>
+                </div>
+                <div>${badgeHtml}</div>
+            </div>
+            
+            <div class="part-tags" style="margin-bottom:8px;">${tagsHtml}</div>
+            
+            <!-- ✨ 按键区域 -->
+            ${actionsHtml}
+
+            <div class="part-footer" style="margin-top:16px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+                <span class="id-tag" style="font-size:10px; color:#64748b;">ID: ${String(role.id).slice(-6)}</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn-take" onclick="takeRole('${role.id}', '${role.name}', event)" 
+                            style="padding:6px 12px; background:#4f46e5; border:none; border-radius:6px; color:white; font-size:12px; cursor:pointer;">
+                        <i class="fas fa-plus"></i> 放入工作台
+                    </button>
+                    ${deleteBtn}
+                </div>
+            </div>
+        </div>
+    `;
+}
 
 // ============ 提示 Toast ============
 function showToast(message) {
