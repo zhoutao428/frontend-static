@@ -85,224 +85,193 @@ export function checkAlchemyReady() {
     }
 }
 // ============ 2. 启动炼丹 (主流程) ============
+// js/alchemy.js - startAIAlchemy (原生修复版)
+
 export async function startAIAlchemy(roleItem, modelItem) {
-    // 🔍 调试日志：看看传进来的到底是啥
-    console.log("🔍 startAIAlchemy 收到参数:", roleItem, modelItem);
+    console.log('炼丹参数:', { roleItem, modelItem });
+
+    // 1. 提取ID (保持你原来的通用逻辑)
+    let roleId = roleItem;
+    if (typeof roleId === 'object') roleId = roleId.id || roleId.data?.id || roleItem.dataset?.id;
     
-    // 宽松校验
-    if (!roleItem || !modelItem) {
-        showToast("⚠️ 原料丢失 (参数为空)", "error");
+    let modelId = modelItem;
+    if (typeof modelId === 'object') modelId = modelId.id || modelId.data?.id || modelItem.dataset?.id;
+
+    // 2. 获取名称 (尝试多种方式，防止报错)
+    const getSafeName = (item) => {
+        if (!item) return "未知";
+        if (typeof item === 'string') return "未知"; // 只有ID没法取名
+        return item.name || item.querySelector?.('.part-name')?.innerText.trim() || "未知";
+    };
+    
+    // 优先用全局工具函数，没有就兜底
+    const roleName = window.getRoleName ? window.getRoleName(roleId) : getSafeName(roleItem);
+    const modelName = window.getModelName ? window.getModelName(modelId) : getSafeName(modelItem);
+
+    log(`🔥 检查炼丹条件: ${roleName} + ${modelName}`);
+
+    // 3. 检查模型配置 (保持原样)
+    const isCloudModel = typeof modelId === 'string' && !modelId.startsWith('custom_');
+    const modelConfig = window.modelAPIConfigs ? window.modelAPIConfigs.get(modelId) : null;
+
+    if (!isCloudModel && (!modelConfig || !modelConfig.endpoint)) {
+        log(`❌ 失败：模型 [${modelName}] 未配置API地址`);
+        alert(`请先为 [${modelName}] 配置API地址`);
+        if (window.alchemyState) {
+            window.alchemyState.materials = [];
+            window.alchemyState.isProcessing = false;
+        }
+        if (window.updateFurnaceDisplay) updateFurnaceDisplay();
         return;
     }
-    // --- A. 参数校验与提取 ---
-    if (!roleItem || !modelItem) {
-        showToast("⚠️ 原料丢失，请重新操作", "error");
-        return;
-    }
 
-    // 1. 提取名字和ID
-    const roleId = roleItem.dataset.id || roleItem.getAttribute('data-id');
-    const roleName = roleItem.querySelector('.part-name')?.innerText.trim() || "未知角色";
-    const modelId = modelItem.dataset.id || modelItem.getAttribute('data-id');
-    const modelName = modelItem.querySelector('.part-name')?.innerText.trim() || "AI模型";
+    log(`✅ 炼丹条件满足，开始炼制...`);
 
-    let rawRole = null;
-
-        // 1. 优先尝试从 RolePartsLibrary 获取 (加了 try-catch)
+    // 4. 启动动画 (加了安全检查，无论你用新版还是旧版动画都能跑)
+    if (window.AlchemyAnimation) {
         try {
-            if (window.RolePartsLibrary && window.RolePartsLibrary.getRoleDetailsEnhanced) {
-                rawRole = window.RolePartsLibrary.getRoleDetailsEnhanced(roleId);
-            } else if (window.RolePartsLibrary && window.RolePartsLibrary.userParts && typeof window.RolePartsLibrary.userParts.find === 'function') {
-                rawRole = window.RolePartsLibrary.userParts.find(roleId);
+            const roleData = { name: roleName, icon: 'fa-user' };
+            const modelData = { name: modelName, id: modelId };
+            
+            // 自动识别方法名
+            if (typeof window.AlchemyAnimation.startAlchemy === 'function') {
+                window.AlchemyAnimation.startAlchemy(roleData, modelData);
+            } else if (typeof window.AlchemyAnimation.start === 'function') {
+                window.AlchemyAnimation.start(roleData, modelData);
             }
         } catch (e) {
-            console.warn("⚠️ 从库中获取角色失败，使用兜底数据:", e);
-        }
-
-        // 2. 如果没获取到，直接用参数里的数据兜底 (这是最稳的，因为 startAIAlchemy 的参数里肯定有名字)
-        if (!rawRole) {
-            // 从 roleItem (Mock DOM) 里硬取
-            // 注意：我们刚才在 checkAlchemyReady 里做的 Mock 对象已经很完善了
-            const safeText = (sel) => {
-                try { return roleItem.querySelector(sel)?.innerText || ""; } catch(e) { return ""; }
-            };
-            
-            rawRole = {
-                id: roleId,
-                name: roleName, // startAIAlchemy 开头已经取到了 roleName
-                description: safeText('.part-desc'),
-                icon: "fa-user" // 简单点，别纠结图标了，防止报错
-            };
-            console.log("ℹ️ 使用兜底角色数据:", rawRole);
-        }
-
-    console.log(`🔥 启动炼丹: ${roleName} + ${modelName}`);
-
-    // 3. 然后再启动动画 (因为动画需要 rawRole.icon)
-    if (window.AlchemyAnimation) {
-        window.AlchemyAnimation.startAlchemy(
-            { name: roleName, icon: rawRole.icon }, // 👈 这里用了 rawRole
-            { name: modelName }
-        );
-        if (window.AlchemyAnimation.setStatus) {
-            window.AlchemyAnimation.setStatus(`正在接入 ${modelName}...`);
+            console.warn('动画启动微瑕:', e);
         }
     }
 
+    // 5. 锁定状态
+    if (window.alchemyState) window.alchemyState.isProcessing = true;
+    if (window.updateFurnaceDisplay) updateFurnaceDisplay();
+
     try {
-        // --- C. 准备原始数据 ---
-        // 尝试从左侧库获取完整数据，如果没有就用 DOM 里的兜底
+        // 6. 获取原始角色数据 (🛡️ 这里修复了你的报错！)
         let rawRole = null;
-        if (window.RolePartsLibrary?.userParts) {
-            rawRole = RolePartsLibrary.userParts.find(roleId);
-        }
-        if (!rawRole) {
-            rawRole = {
-                id: roleId,
-                name: roleName,
-                description: roleItem.querySelector('.part-desc')?.innerText || "",
-                icon: roleItem.querySelector('.part-icon i')?.className.replace('fas ', '') || "fa-user"
-            };
+
+        // A. 尝试从增强接口获取
+        if (window.RolePartsLibrary && typeof RolePartsLibrary.getRoleDetailsEnhanced === 'function') {
+            try { rawRole = RolePartsLibrary.getRoleDetailsEnhanced(roleId); } catch(e){}
         }
 
-        // --- D. 调用 AI (耗时操作) ---
-        console.log("🤖 正在请求 AI 增强...");
+        // B. 尝试从 userParts 获取 (修复了 .find 报错)
+        if (!rawRole && typeof roleId === 'string' && roleId.startsWith('user_')) {
+            // 关键修复：加了问号检查，防止 userParts 未定义
+            if (window.RolePartsLibrary && window.RolePartsLibrary.userParts && typeof window.RolePartsLibrary.userParts.find === 'function') {
+                rawRole = RolePartsLibrary.userParts.find(roleId);
+            }
+        }
+
+        // C. 兜底数据 (防止 rawRole 为空导致后面崩)
+        if (!rawRole) {
+            rawRole = { name: roleName, id: roleId, tags: [], description: "", icon: "fa-user" };
+        }
+
+        // 7. 调用真实API
+        log(`🤖 调用AI API进行角色增强...`);
         const enhancedData = await callRealAIForEnhancement(rawRole, modelId);
         
-        console.log("📦 AI 返回数据:", enhancedData);
+        if (!enhancedData) throw new Error("AI未返回有效数据");
+        console.log("【调试】AI返回的数据:", enhancedData);
 
-        // --- E. 组装新角色数据 ---
+        // 8. 组装新角色
         const newRoleName = enhancedData.name || `${roleName} (增强版)`;
         const newRole = {
             name: newRoleName,
             description: enhancedData.description || `由 ${modelName} 增强`,
-            icon: rawRole.icon || "fa-robot",
-            bg_class: "role-ai", // 赋予一个特殊的样式类
-            expertise: enhancedData.tags || enhancedData.expertise || [],
+            icon: rawRole.icon || 'fa-robot',
+            bg_class: 'role-ai',
+            expertise: enhancedData.tags || enhancedData.expertise || [], // 兼容不同字段
             prompt_template: enhancedData.prompt || enhancedData.system_prompt || "",
             actions: enhancedData.actions || [],
-            capabilities: enhancedData.capabilities || { core: [] },
-            
+            capabilities: enhancedData.capabilities || { core: [] }, // 补全字段
             role_type: 'user',
             is_deletable: true,
             created_at: new Date().toISOString()
         };
 
-        // --- F. 身份分流与存储 (核心) ---
+        // ============================================
+        // 👇 这里是你要求的：管理员存云端 / 用户存本地逻辑 👇
+        // ============================================
+        
         let userEmail = '';
         let token = '';
-        
         if (window.supabase) {
             const { data } = await window.supabase.auth.getSession();
             userEmail = data.session?.user?.email;
             token = data.session?.access_token;
         }
 
-        console.log(`👤 当前用户: ${userEmail}`);
+        console.log(`👤 结算身份: ${userEmail}`);
 
-        // 👑 分支: 管理员
+        // 分支 A: 管理员
         if (userEmail === 'z17756037070@gmail.com') {
-            if (confirm(`👑 管理员操作\n\n是否将 [${newRoleName}] 发布到官方云端仓库？\n(取消则仅存入本地)`)) {
-                // 存云端
-                newRole.role_type = 'system';
-                newRole.is_deletable = false;
-                
-                const res = await fetch(`${API_BASE}/api/roles`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(newRole)
-                });
-                
-                if (!res.ok) throw new Error("云端上传失败");
-                const savedRole = await res.json();
-                showToast(`🎉 [官方] 角色已发布！`);
-                
-                // 云端角色不需要手动更新左侧栏，下次刷新仓库可见
+            if (confirm(`👑 管理员操作\n\n是否发布到官方云端仓库？\n(取消则存入本地)`)) {
+                try {
+                    // 存云端
+                    const cloudRole = { ...newRole, role_type: 'system', is_deletable: false };
+                    
+                    const res = await fetch(`${API_BASE}/api/roles`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(cloudRole)
+                    });
+                    
+                    if (!res.ok) throw new Error("云端上传失败");
+                    const savedRole = await res.json();
+                    showToast(`🎉 [官方] 角色已发布！`);
+                } catch(e) {
+                    alert("发布失败: " + e.message);
+                    saveToLocal(newRole); // 失败兜底
+                }
             } else {
-                // 管理员选了本地
-                saveToLocal(newRole);
+                saveToLocal(newRole); // 管理员手动选本地
             }
         } 
-        // 👤 分支: 普通用户 (绝不上传!)
+        // 分支 B: 普通用户
         else {
             saveToLocal(newRole);
         }
 
-        // --- G. 成功收尾 ---
-        if (window.AlchemyAnimation) {
+        // 9. 成功收尾
+        log(`✅ 炼丹成功！新角色 [${newRoleName}] 已生成`);
+
+        if (window.AlchemyAnimation && window.AlchemyAnimation.finish) {
             window.AlchemyAnimation.finish();
         }
 
-        // 消耗原料 (如果是本地草稿，用完即焚)
-        if (roleId.startsWith('user_') && window.RolePartsLibrary?.userParts) {
-            // RolePartsLibrary.userParts.delete(roleId); // 暂时注释掉，防止误删
-            // console.log(`♻️ 原料 [${roleName}] 已消耗`);
-        }
-
-        // 刷新列表 (如果存了本地)
-        if (window.renderPartsGrid) window.renderPartsGrid();
-
-        // 2秒后重置炉子
+        // 10. 清理现场 (不再刷新页面，只重置数据)
         setTimeout(() => {
             if (window.alchemyState) {
                 window.alchemyState.materials = [];
                 window.alchemyState.isProcessing = false;
-                // updateFurnaceDisplay(); // 如果你有这个函数
-                // 刷新页面重新加载
-                location.reload(); // 简单粗暴刷新，确保数据同步
+                if(window.updateFurnaceDisplay) window.updateFurnaceDisplay();
             }
         }, 2000);
 
     } catch (error) {
-        console.error("❌ 炼丹失败:", error);
-        showToast(`炼丹失败: ${error.message}`, "error");
+        console.error(error);
+        log(`❌ 炼丹失败: ${error.message}`);
         
+        if (window.AlchemyAnimation && window.AlchemyAnimation.showError) {
+            window.AlchemyAnimation.showError(error.message);
+        }
+        
+        // 重置状态
         if (window.alchemyState) {
             window.alchemyState.materials = [];
             window.alchemyState.isProcessing = false;
+            if(window.updateFurnaceDisplay) updateFurnaceDisplay();
         }
     }
 }
 
-// ============ 3. 本地存储辅助函数 ============
-class RolePartsLibrary {
-    constructor() {
-        this.userParts = new PartsCollection('user-parts-container');
-        this.init();
-    }
-
-    init() {
-        // ... 加载预设 ...
-
-        // ✅ 关键：加载本地存储的用户角色
-        this.loadUserRoles();
-    }
-
-    loadUserRoles() {
-        try {
-            // 必须和 saveToLocal 里的 Key 一致！('user_templates')
-            const savedRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-            
-            // 清空旧数据 (防止重复)
-            this.userParts.items = []; 
-            
-            // 重新添加
-            savedRoles.forEach(role => {
-                this.userParts.add(role); 
-            });
-            
-            // 渲染到 DOM
-            this.userParts.render();
-            
-            console.log(`📚 已加载 ${savedRoles.length} 个本地角色`);
-        } catch (e) {
-            console.error("加载本地角色失败:", e);
-        }
-    }
-}
 function saveToLocal(role) {
     // 1. 生成本地 ID (如果还没有)
     if (!role.id || !role.id.startsWith('local_')) {
@@ -880,6 +849,29 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+// 放在 alchemy.js 最底部
+function saveToLocal(role) {
+    role.id = `local_${Date.now()}`;
+    role.is_local = true;
+    
+    let localRoles = [];
+    try {
+        localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+    } catch(e) {}
+    
+    localRoles.unshift(role);
+    localStorage.setItem('user_templates', JSON.stringify(localRoles));
+    
+    // 尝试刷新左侧栏 (兼容旧代码)
+    if (window.renderPartsGrid) window.renderPartsGrid();
+    else if (window.RolePartsLibrary && window.RolePartsLibrary.userParts && window.RolePartsLibrary.userParts.init) {
+        // 如果有 init 方法，重新跑一次
+        window.RolePartsLibrary.userParts.init(); 
+    }
+    
+    showToast(`✅ 角色 [${role.name}] 已存入本地`);
+}
+
 
 
 
