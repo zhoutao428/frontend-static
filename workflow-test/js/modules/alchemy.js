@@ -33,32 +33,43 @@ export function checkAlchemyReady() {
     if (roleMaterial && modelMaterial) {
         console.log('✅ 原料齐备 (内存数据)', roleMaterial, modelMaterial);
         
-        // 构造更健壮的 Mock 对象 (模拟 DOM)
-        // 确保 startAIAlchemy 里能通过 .dataset.id 或 .getAttribute('data-id') 取到值
+        // 🛠️ 智能解包：如果 id 是个对象，说明存错了位置，但数据还在
+        const realRoleData = (typeof roleMaterial.id === 'object') ? roleMaterial.id : roleMaterial;
+        const realModelData = (typeof modelMaterial.id === 'object') ? modelMaterial.id : modelMaterial;
         
+        console.log('🔍 解包后的角色数据:', realRoleData);
+        console.log('🔍 解包后的模型数据:', realModelData);
+        
+        // 构造更健壮的 Mock 对象 (模拟 DOM)
         const mockRoleEl = {
-            dataset: { id: roleMaterial.id },
-            getAttribute: (attr) => (attr === 'data-id' ? roleMaterial.id : null),
+            dataset: { id: realRoleData.id },
+            getAttribute: (attr) => (attr === 'data-id' ? realRoleData.id : null),
             querySelector: (sel) => {
                 // 模拟 .part-name
-                if (sel.includes('part-name')) return { innerText: roleMaterial.name || "未知角色" };
+                if (sel.includes('part-name')) {
+                    return { innerText: realRoleData.name || realRoleData.roleName || "未知角色" };
+                }
                 // 模拟 .part-desc
-                if (sel.includes('part-desc')) return { innerText: roleMaterial.desc || "" };
+                if (sel.includes('part-desc')) {
+                    return { innerText: realRoleData.desc || realRoleData.description || "" };
+                }
                 // 模拟图标 .part-icon i
-                if (sel.includes('part-icon i') || sel.includes('i')) return { 
-                    className: roleMaterial.icon || "fas fa-user",
-                    replace: () => roleMaterial.icon // 防止调用 replace 报错
-                };
+                if (sel.includes('part-icon i') || sel.includes('i')) {
+                    return { 
+                        className: realRoleData.icon || "fas fa-user",
+                        replace: () => realRoleData.icon || "fa-user" // 防止调用 replace 报错
+                    };
+                }
                 return { innerText: "", className: "" }; // 兜底返回空对象，防止报错
             }
         };
 
         const mockModelEl = {
-            dataset: { id: modelMaterial.id },
-            getAttribute: (attr) => (attr === 'data-id' ? modelMaterial.id : null),
+            dataset: { id: realModelData.id },
+            getAttribute: (attr) => (attr === 'data-id' ? realModelData.id : null),
             querySelector: (sel) => {
                 if (sel.includes('part-name') || sel.includes('model-name')) {
-                    return { innerText: modelMaterial.name || "AI模型" };
+                    return { innerText: realModelData.name || realModelData.modelName || "AI模型" };
                 }
                 return { innerText: "" };
             }
@@ -98,9 +109,17 @@ export async function startAIAlchemy(roleItem, modelItem) {
         window.alchemyState.isProcessing = true;
     }
     
-    if (window.AlchemyAnimation) {
-        window.AlchemyAnimation.start();
-        window.AlchemyAnimation.setStatus(`正在接入 ${modelName}...`);
+     if (window.AlchemyAnimation) {
+        // ✅ 必须调用新方法名 startAlchemy，并传入两个对象
+        window.AlchemyAnimation.startAlchemy(
+            { name: roleName, icon: rawRole.icon || 'fa-user' }, // 参数1: 角色数据
+            { name: modelName, id: modelId }                     // 参数2: 模型数据
+        );
+        
+        // 顺便设置初始状态
+        if (window.AlchemyAnimation.setStatus) {
+            window.AlchemyAnimation.setStatus(`正在接入 ${modelName}...`);
+        }
     }
 
     try {
@@ -766,6 +785,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
