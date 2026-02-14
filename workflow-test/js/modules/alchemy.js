@@ -804,27 +804,57 @@ export async function runAgent(roleId, prompt) {
 
 }
 // 放在 alchemy.js 最底部
+// js/alchemy.js - 底部
+
 function saveToLocal(role) {
+    // 1. 生成 ID & 标记
     role.id = `local_${Date.now()}`;
     role.is_local = true;
     
+    // ✅ 2. 字段兼容补丁 (让侧边栏能读到数据)
+    // 侧边栏可能还在用 tags/desc/category，这里我们把新数据复制一份给旧字段
+    role.tags = role.expertise || role.tags || []; 
+    role.desc = role.description || "";
+    role.category = 'custom'; // 确保归类到“自定义”分组，否则侧边栏可能不显示
+    
+    // 3. 读取旧数据
     let localRoles = [];
     try {
         localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-    } catch(e) {}
+    } catch(e) { localRoles = []; }
     
+    // 4. 写入新数据 (插到最前)
     localRoles.unshift(role);
     localStorage.setItem('user_templates', JSON.stringify(localRoles));
     
-    // 尝试刷新左侧栏 (兼容旧代码)
-    if (window.renderPartsGrid) window.renderPartsGrid();
-    else if (window.RolePartsLibrary && window.RolePartsLibrary.userParts && window.RolePartsLibrary.userParts.init) {
-        // 如果有 init 方法，重新跑一次
-        window.RolePartsLibrary.userParts.init(); 
+    // 5. 刷新 UI (侧边栏)
+    console.log("🔄 正在刷新侧边栏...");
+    if (window.RolePartsLibrary) {
+        // 优先调用新版加载器
+        if (typeof window.RolePartsLibrary.loadUserRoles === 'function') {
+            window.RolePartsLibrary.loadUserRoles();
+        } 
+        // 兼容旧版 userParts
+        else if (window.RolePartsLibrary.userParts) {
+            // 手动添加到内存，防止不用刷新页面就能看到
+            if (window.RolePartsLibrary.userParts.add) {
+                window.RolePartsLibrary.userParts.add(role);
+            }
+            // 重新初始化/渲染
+            if (window.RolePartsLibrary.userParts.init) {
+                window.RolePartsLibrary.userParts.init();
+            }
+        }
+    }
+    
+    // 兼容全局渲染函数
+    if (typeof window.renderPartsGrid === 'function') {
+        window.renderPartsGrid();
     }
     
     showToast(`✅ 角色 [${role.name}] 已存入本地`);
 }
+
 
 
 
