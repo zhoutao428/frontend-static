@@ -31,21 +31,55 @@ export function checkAlchemyReady() {
     const modelMaterial = materials.find(m => m.type === 'model');
 
     if (roleMaterial && modelMaterial) {
-        console.log('✅ 原料齐备！准备启动...');
+        console.log('✅ 原料齐备 (内存数据)', roleMaterial, modelMaterial);
         
-        // 传递 DOM 元素 (alchemyState 里应该存了 element)
-        // 如果 alchemyState 只存了 id，这里需要重新获取 DOM
-        // 为了稳妥，我们重新获取 DOM 元素传给 startAIAlchemy
-        const roleEl = document.querySelector(`.part-card[data-id="${roleMaterial.id}"]`);
-        const modelEl = document.querySelector(`.model-card[data-id="${modelMaterial.id}"]`) || 
-                        document.querySelector(`.model-item[data-id="${modelMaterial.id}"]`);
+        // 构造更健壮的 Mock 对象 (模拟 DOM)
+        // 确保 startAIAlchemy 里能通过 .dataset.id 或 .getAttribute('data-id') 取到值
+        
+        const mockRoleEl = {
+            dataset: { id: roleMaterial.id },
+            getAttribute: (attr) => (attr === 'data-id' ? roleMaterial.id : null),
+            querySelector: (sel) => {
+                // 模拟 .part-name
+                if (sel.includes('part-name')) return { innerText: roleMaterial.name || "未知角色" };
+                // 模拟 .part-desc
+                if (sel.includes('part-desc')) return { innerText: roleMaterial.desc || "" };
+                // 模拟图标 .part-icon i
+                if (sel.includes('part-icon i') || sel.includes('i')) return { 
+                    className: roleMaterial.icon || "fas fa-user",
+                    replace: () => roleMaterial.icon // 防止调用 replace 报错
+                };
+                return { innerText: "", className: "" }; // 兜底返回空对象，防止报错
+            }
+        };
 
-        startAIAlchemy(roleEl, modelEl).catch(e => console.error("❌ 启动失败:", e));
+        const mockModelEl = {
+            dataset: { id: modelMaterial.id },
+            getAttribute: (attr) => (attr === 'data-id' ? modelMaterial.id : null),
+            querySelector: (sel) => {
+                if (sel.includes('part-name') || sel.includes('model-name')) {
+                    return { innerText: modelMaterial.name || "AI模型" };
+                }
+                return { innerText: "" };
+            }
+        };
+
+        // 调用主函数
+        startAIAlchemy(mockRoleEl, mockModelEl).catch(e => console.error("❌ 启动失败:", e));
+    } else {
+        console.log("⏳ 等待原料...");
     }
 }
 // ============ 2. 启动炼丹 (主流程) ============
 export async function startAIAlchemy(roleItem, modelItem) {
+    // 🔍 调试日志：看看传进来的到底是啥
+    console.log("🔍 startAIAlchemy 收到参数:", roleItem, modelItem);
     
+    // 宽松校验
+    if (!roleItem || !modelItem) {
+        showToast("⚠️ 原料丢失 (参数为空)", "error");
+        return;
+    }
     // --- A. 参数校验与提取 ---
     if (!roleItem || !modelItem) {
         showToast("⚠️ 原料丢失，请重新操作", "error");
@@ -732,6 +766,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
