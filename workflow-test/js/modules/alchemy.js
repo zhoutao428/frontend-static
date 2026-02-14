@@ -732,32 +732,6 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
-// ============ 辅助函数 (放在文件最底部的外面) ============
-function saveToLocal(role) {
-    role.id = `local_${Date.now()}`; // 生成本地 ID
-    role.is_local = true;            // 标记为本地
-    role.role_type = 'user';         // 标记为用户自制
-    
-    // 存 LocalStorage
-    let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-    localRoles.unshift(role);
-    localStorage.setItem('user_templates', JSON.stringify(localRoles));
-    
-    showToast(`✅ 角色 [${role.name}] 已存入本地背包`);
-    
-    // 立即更新左侧列表 UI (不用刷新页面)
-    if (window.RolePartsLibrary && RolePartsLibrary.userParts) {
-        RolePartsLibrary.userParts.create({
-            ...role,
-            category: 'custom',
-            color: '#8b5cf6',
-            apiTemplate: {
-                systemPrompt: role.prompt_template,
-                temperature: 0.7
-            }
-        });
-    }
-}
 // ============ 工具函数补充 ============
 
 function showToast(message, type = 'info') {
@@ -782,6 +756,7 @@ function showToast(message, type = 'info') {
         toast.remove();
     }, 3000);
 }
+
 
 
 
