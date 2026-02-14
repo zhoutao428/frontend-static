@@ -91,79 +91,58 @@ function switchTab(tabName) {
 }
 
 // ============ 加载角色 (核心函数) ============
+// warehouse.js
+
 async function loadRoles(token) {
-    // 如果没有传入 token，尝试获取一次
-    if (!token) {
-        const { data } = await window.supabase.auth.getSession();
-        token = data.session?.access_token;
-    }
-
-    if (!token) {
-        console.warn('⚠️ 未登录，无法加载角色');
-        document.getElementById('role-grid').innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-lock"></i>
-                <p>请先登录查看角色仓库</p>
-                <button onclick="window.location.href='login.html'" style="margin-top: 10px; padding: 6px 12px; background: #4f46e5; border:none; border-radius:4px; color:white; cursor:pointer;">去登录</button>
-            </div>
-        `;
-        return;
-    }
-
-    console.log('📡 开始请求角色列表...');
-    const grid = document.getElementById('role-grid');
-    // 只有第一次加载时才显示 loading，刷新时不显示
-    if (allRoles.length === 0) {
-        grid.innerHTML = `
-            <div class="loading-state">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>正在从云端拉取角色...</p>
-            </div>
-        `;
-    }
-
+    console.log('📡 开始加载角色...');
+    
+    // 1. 加载云端 (只加载系统预设角色)
+    let cloudRoles = [];
     try {
-        const res = await fetch(`${API_BASE}/api/roles`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!res.ok) throw new Error(`加载失败: ${res.status}`);
-
-        const responseData = await res.json();
+        // 如果没登录，可能只允许拉取 public 角色，或者 token 为空
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE}/api/roles`, { headers });
         
-        // ✅ 数据格式兼容处理：可能是 [..] 也可能是 { data: [..] }
-        let rolesData = [];
-        if (Array.isArray(responseData)) {
-            rolesData = responseData;
-        } else if (responseData.data && Array.isArray(responseData.data)) {
-            rolesData = responseData.data;
-        } else {
-            console.warn("数据格式异常:", responseData);
-            rolesData = [];
+        if (res.ok) {
+            const data = await res.json();
+            // 兼容 {data:[]} 和 [] 格式
+            cloudRoles = (Array.isArray(data) ? data : data.data) || [];
+            
+            // 标记云端角色 (防止 ID 冲突)
+            cloudRoles = cloudRoles.map(r => ({
+                ...r,
+                is_cloud: true, // 标记为云端
+                is_deletable: false // 系统角色默认不可删
+            }));
         }
-
-        allRoles = rolesData;
-        filteredRoles = [...allRoles];
-
-        console.log(`📦 成功加载 ${allRoles.length} 个角色`);
-        
-        document.getElementById('role-count').textContent = allRoles.length;
-        document.getElementById('total-count').textContent = `共 ${allRoles.length} 个角色`;
-        renderRoles();
-
-    } catch (error) {
-        console.error('❌ 加载角色失败:', error);
-        grid.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>加载失败，请检查网络</p>
-                <button id="retry-btn" style="margin-top: 16px; padding: 8px 16px; background: #6366f1; border: none; border-radius: 6px; color: white; cursor: pointer;">
-                    重试
-                </button>
-            </div>
-        `;
-        document.getElementById('retry-btn').onclick = () => loadRoles(token);
+    } catch (e) {
+        console.warn("云端角色加载失败:", e);
     }
+
+    // 2. 加载本地 (用户炼制的角色)
+    let localRoles = [];
+    try {
+        localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+        // 确保本地角色有正确标记
+        localRoles = localRoles.map(r => ({
+            ...r,
+            is_cloud: false,
+            is_deletable: true // 本地角色随便删
+        }));
+    } catch (e) {
+        console.warn("本地数据解析失败:", e);
+    }
+
+    // 3. 合并 (本地在前，云端在后)
+    allRoles = [...localRoles, ...cloudRoles];
+    filteredRoles = [...allRoles];
+
+    console.log(`📦 加载完成: 本地 ${localRoles.length} + 云端 ${cloudRoles.length}`);
+    
+    // 更新 UI
+    document.getElementById('role-count').textContent = allRoles.length;
+    document.getElementById('total-count').textContent = `共 ${allRoles.length} 个角色`;
+    renderRoles();
 }
 
 // ============ 过滤角色 ============
@@ -277,38 +256,36 @@ window.takeRole = function(roleId, roleName, event) {
 };
 
 // ============ 删除角色 ============
+
 window.deleteRole = async function(roleId, event) {
     event && event.stopPropagation();
-    if (!confirm('确定删除这个角色吗？此操作不可恢复。')) return;
+    if (!confirm('确定删除这个角色吗？')) return;
 
-    try {
-        const { data } = await window.supabase.auth.getSession();
-        const token = data.session?.access_token;
+    // 1. 找到这个角色
+    const role = allRoles.find(r => r.id === roleId);
+    if (!role) return;
 
-        const res = await fetch(`${API_BASE}/api/roles/${roleId}`, {
-            method: 'DELETE',
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-
-        if (!res.ok) {
-            const error = await res.json();
-            throw new Error(error.error || '删除失败');
-        }
-
-        // 前端移除
-        allRoles = allRoles.filter(r => r.id !== roleId);
-        filteredRoles = filteredRoles.filter(r => r.id !== roleId);
+    if (role.is_cloud) {
+        // A. 如果是云端角色 -> 提示不可删 (或者你需要管理员权限才能删)
+        alert("🚫 系统预设角色无法删除！");
+        return;
+    } else {
+        // B. 如果是本地角色 -> 删 LocalStorage
+        let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+        localRoles = localRoles.filter(r => r.id !== roleId);
+        localStorage.setItem('user_templates', JSON.stringify(localRoles));
         
-        document.getElementById('role-count').textContent = allRoles.length;
-        document.getElementById('total-count').textContent = `共 ${filteredRoles.length} 个角色`;
-        renderRoles();
-        
-        showToast('✅ 角色已删除');
-
-    } catch (error) {
-        alert(error.message);
+        showToast('🗑️ 本地角色已删除');
     }
+
+    // 2. 刷新页面显示
+    allRoles = allRoles.filter(r => r.id !== roleId);
+    filteredRoles = filteredRoles.filter(r => r.id !== roleId);
+    
+    document.getElementById('role-count').textContent = allRoles.length;
+    renderRoles();
 };
+
 
 // ============ 显示详情 (可选) ============
 window.showRoleDetail = function(roleId) {
