@@ -70,7 +70,12 @@ export function checkAlchemyReady() {
             dataset: { id: realModelData.id || "unknown_model" },
             getAttribute: () => realModelData.id || "unknown_model",
             querySelector: (sel) => {
-                if (sel.includes('name')) return { innerText: modelNameStr };
+                // 🛠️ 暴力修复：不管 name 是啥，先转成字符串
+                if (sel.includes('name')) {
+                    const rawName = realModelData.name;
+                    const safeName = (typeof rawName === 'object') ? (rawName.innerText || "AI模型") : rawName;
+                    return { innerText: String(safeName), trim: () => String(safeName).trim() };
+                }
                 return { innerText: "" };
             }
         };
@@ -853,6 +858,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
