@@ -106,13 +106,35 @@ export async function startAIAlchemy(roleItem, modelItem) {
     const modelId = modelItem.dataset.id || modelItem.getAttribute('data-id');
     const modelName = modelItem.querySelector('.part-name')?.innerText.trim() || "AI模型";
 
-    // 2. ⚠️ 必须先定义 rawRole！
-    const rawRole = {
-        id: roleId,
-        name: roleName,
-        description: roleItem.querySelector('.part-desc')?.innerText || "",
-        icon: roleItem.querySelector('.part-icon i')?.className.replace('fas ', '') || "fa-user"
-    };
+    let rawRole = null;
+
+        // 1. 优先尝试从 RolePartsLibrary 获取 (加了 try-catch)
+        try {
+            if (window.RolePartsLibrary && window.RolePartsLibrary.getRoleDetailsEnhanced) {
+                rawRole = window.RolePartsLibrary.getRoleDetailsEnhanced(roleId);
+            } else if (window.RolePartsLibrary && window.RolePartsLibrary.userParts && typeof window.RolePartsLibrary.userParts.find === 'function') {
+                rawRole = window.RolePartsLibrary.userParts.find(roleId);
+            }
+        } catch (e) {
+            console.warn("⚠️ 从库中获取角色失败，使用兜底数据:", e);
+        }
+
+        // 2. 如果没获取到，直接用参数里的数据兜底 (这是最稳的，因为 startAIAlchemy 的参数里肯定有名字)
+        if (!rawRole) {
+            // 从 roleItem (Mock DOM) 里硬取
+            // 注意：我们刚才在 checkAlchemyReady 里做的 Mock 对象已经很完善了
+            const safeText = (sel) => {
+                try { return roleItem.querySelector(sel)?.innerText || ""; } catch(e) { return ""; }
+            };
+            
+            rawRole = {
+                id: roleId,
+                name: roleName, // startAIAlchemy 开头已经取到了 roleName
+                description: safeText('.part-desc'),
+                icon: "fa-user" // 简单点，别纠结图标了，防止报错
+            };
+            console.log("ℹ️ 使用兜底角色数据:", rawRole);
+        }
 
     console.log(`🔥 启动炼丹: ${roleName} + ${modelName}`);
 
@@ -858,6 +880,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
