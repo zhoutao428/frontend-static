@@ -26,59 +26,57 @@ export function checkAlchemyReady() {
     if (!window.alchemyState) return;
     const materials = window.alchemyState.materials;
     
-    // 查找原料
     const roleMaterial = materials.find(m => m.type === 'role');
     const modelMaterial = materials.find(m => m.type === 'model');
 
     if (roleMaterial && modelMaterial) {
-        console.log('✅ 原料齐备 (内存数据)', roleMaterial, modelMaterial);
-        
-        // 🛠️ 智能解包：如果 id 是个对象，说明存错了位置，但数据还在
-        const realRoleData = (typeof roleMaterial.id === 'object') ? roleMaterial.id : roleMaterial;
-        const realModelData = (typeof modelMaterial.id === 'object') ? modelMaterial.id : modelMaterial;
-        
-        console.log('🔍 解包后的角色数据:', realRoleData);
-        console.log('🔍 解包后的模型数据:', realModelData);
-        
-        // 构造更健壮的 Mock 对象 (模拟 DOM)
+        console.log('✅ 原料齐备，正在构造 Mock DOM...');
+
+        // === 辅助工具：提取纯字符串 ===
+        const extractString = (val) => {
+            if (typeof val === 'string') return val;
+            if (typeof val === 'object' && val !== null) {
+                // 尝试取常见字段
+                return val.name || val.title || val.innerText || "未知";
+            }
+            return String(val || "");
+        };
+
+        // === 构造 Role Mock ===
+        // 有时候 id 也是对象，解包一下
+        const realRoleData = roleMaterial.id?.id ? roleMaterial.id : roleMaterial;
+        const roleNameStr = extractString(realRoleData.name || realRoleData.id?.name);
+
         const mockRoleEl = {
-            dataset: { id: realRoleData.id },
-            getAttribute: (attr) => (attr === 'data-id' ? realRoleData.id : null),
+            dataset: { id: realRoleData.id || "unknown_role" },
+            getAttribute: () => realRoleData.id || "unknown_role",
             querySelector: (sel) => {
                 // 模拟 .part-name
-                if (sel.includes('part-name')) {
-                    return { innerText: realRoleData.name || realRoleData.roleName || "未知角色" };
-                }
-                // 模拟 .part-desc
-                if (sel.includes('part-desc')) {
-                    return { innerText: realRoleData.desc || realRoleData.description || "" };
-                }
-                // 模拟图标 .part-icon i
-                if (sel.includes('part-icon i') || sel.includes('i')) {
-                    return { 
-                        className: realRoleData.icon || "fas fa-user",
-                        replace: () => realRoleData.icon || "fa-user" // 防止调用 replace 报错
-                    };
-                }
-                return { innerText: "", className: "" }; // 兜底返回空对象，防止报错
+                if (sel.includes('name')) return { innerText: roleNameStr };
+                // 模拟 .part-icon i
+                if (sel.includes('icon') || sel.includes('i')) return { 
+                    className: extractString(realRoleData.icon || "fa-user") 
+                };
+                // 兜底
+                return { innerText: "" }; 
             }
         };
 
+        // === 构造 Model Mock ===
+        const realModelData = modelMaterial.id?.id ? modelMaterial.id : modelMaterial;
+        const modelNameStr = extractString(realModelData.name || modelMaterial.name);
+
         const mockModelEl = {
-            dataset: { id: realModelData.id },
-            getAttribute: (attr) => (attr === 'data-id' ? realModelData.id : null),
+            dataset: { id: realModelData.id || "unknown_model" },
+            getAttribute: () => realModelData.id || "unknown_model",
             querySelector: (sel) => {
-                if (sel.includes('part-name') || sel.includes('model-name')) {
-                    return { innerText: realModelData.name || realModelData.modelName || "AI模型" };
-                }
+                if (sel.includes('name')) return { innerText: modelNameStr };
                 return { innerText: "" };
             }
         };
 
         // 调用主函数
         startAIAlchemy(mockRoleEl, mockModelEl).catch(e => console.error("❌ 启动失败:", e));
-    } else {
-        console.log("⏳ 等待原料...");
     }
 }
 // ============ 2. 启动炼丹 (主流程) ============
@@ -785,6 +783,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
