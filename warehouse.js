@@ -110,10 +110,12 @@ async function loadRoles(token) {
             
             // 标记云端角色 (防止 ID 冲突)
             cloudRoles = cloudRoles.map(r => ({
-                ...r,
-                is_cloud: true, // 标记为云端
-                is_deletable: false // 系统角色默认不可删
-            }));
+    ...r,
+    is_cloud: true,
+    // 只有 role_type 明确为 'system' 的才是不可删的预制角色
+    // 如果是 'user' 类型（即便是云端的），也应该是可删的（只要你是拥有者）
+    is_deletable: r.role_type !== 'system' 
+}));
         }
     } catch (e) {
         console.warn("云端角色加载失败:", e);
@@ -176,16 +178,22 @@ function renderRoles() {
         return;
     }
 
-    grid.innerHTML = filteredRoles.map(role => {
-        const isSystem = role.role_type === 'system' || role.type === 'system';
-        const isDeletable = role.is_deletable === true || role.role_type === 'user'; // 系统角色通常不可删
+     grid.innerHTML = filteredRoles.map(role => {
+        // 1. 严格判定系统角色 (只有 role_type 是 system 才是官方的)
+        // 兼容旧数据：如果 role.type 是 system 且它是云端角色 (is_cloud)，也算官方
+        const isSystem = role.role_type === 'system' || (role.is_cloud && role.type === 'system');
+
+        // 2. 判定是否显示删除按钮
+        // 只要不是系统角色，或者明确标记为可删除 (is_deletable)，就可以删
+        // 注意：本地角色 (is_local) 永远可删
+        const canDelete = !isSystem || role.is_local;
 
         const badgeHtml = isSystem
             ? `<span class="role-badge prebuild" style="background:#4f46e5; padding:2px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-star"></i> 官方</span>`
             : `<span class="role-badge user" style="background:#10b981; padding:2px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-user"></i> 自制</span>`;
 
-        const deleteBtn = !isSystem 
-            ? `<button class="btn-icon danger" onclick="deleteRole(${role.id}, event)" title="删除" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>`
+        const deleteBtn = canDelete
+            ? `<button class="btn-icon danger" onclick="deleteRole('${role.id}', event)" title="删除" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>`
             : '';
 
         const expertise = Array.isArray(role.expertise) ? role.expertise : [];
