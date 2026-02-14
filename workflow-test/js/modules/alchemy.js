@@ -112,7 +112,7 @@ if (typeof modelId === 'object') modelId = modelId.id || modelId.data?.id;
         log(`🤖 调用AI API进行角色增强...`);
         
         // 调用下面的 callRealAIForEnhancement
-       // ...
+       const enhancedData = await callRealAIForEnhancement({ name: roleName, id: roleId }, modelId);
       const newRoleName = enhancedData.name || `${roleName} (增强版)`;
 
     // 1. 构造标准角色数据对象 (Warehouse 格式)
@@ -794,4 +794,5 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
