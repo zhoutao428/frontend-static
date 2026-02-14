@@ -363,4 +363,108 @@ export function updateApiStatus(roleId) {
         }
     });
 }
+// ============ 粉碎机模块 (复活版) ============
+
+export function initTrashCan() {
+    // 防止重复创建
+    if (document.getElementById('trash-can')) return;
+
+    // 1. 动态插入样式
+    const style = document.createElement('style');
+    style.innerHTML = `
+        #trash-can {
+            position: fixed; left: 30px; bottom: 30px; width: 70px; height: 70px;
+            background: rgba(30, 41, 59, 0.8); border: 2px dashed #475569; border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #cbd5e1; cursor: pointer; z-index: 9999;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(4px); user-select: none;
+        }
+        #trash-can i { font-size: 24px; margin-bottom: 4px; }
+        #trash-can span { font-size: 10px; }
+        #trash-can.drag-over {
+            background: rgba(239, 68, 68, 0.9); border-color: #fca5a5;
+            transform: scale(1.15) rotate(-5deg); color: white;
+            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.5);
+        }
+        @keyframes shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+        .shaking { animation: shake 0.5s ease-in-out; }
+    `;
+    document.head.appendChild(style);
+
+    // 2. 动态创建DOM
+    const trash = document.createElement('div');
+    trash.id = 'trash-can';
+    trash.innerHTML = `<i class="fas fa-trash-alt"></i><span>粉碎机</span>`;
+    document.body.appendChild(trash);
+
+    // 3. 绑定事件
+    trash.addEventListener('dragover', (e) => {
+        e.preventDefault(); // 👈 关键
+        if (isValidTrashItem()) trash.classList.add('drag-over');
+    });
+
+    trash.addEventListener('dragleave', () => trash.classList.remove('drag-over'));
+
+    trash.addEventListener('drop', (e) => {
+        e.preventDefault();
+        trash.classList.remove('drag-over');
+        if (isValidTrashItem()) handleTrashDelete();
+        else alert("🚫 此物品不可销毁 (系统预制/云端角色)");
+    });
+}
+
+// ✅ 修复：兼容 local_ 和 user_ 前缀
+function isValidTrashItem() {
+    if (window.draggedType !== 'role' || !window.draggedItem) return false;
+    
+    let roleId = window.draggedItem.id || window.draggedItem;
+    roleId = String(roleId); // 确保是字符串
+
+    // 允许删除 user_ (旧版) 和 local_ (新版)
+    return roleId.startsWith('user_') || roleId.startsWith('local_');
+}
+
+// ✅ 修复：正确删除 LocalStorage
+function handleTrashDelete() {
+    let roleId = window.draggedItem.id || window.draggedItem;
+    // 尝试获取名字 (如果有的话)
+    const roleName = window.draggedItem.name || '该角色';
+
+    if (confirm(`⚠️ 确定要粉碎 [${roleName}] 吗？\n此操作无法撤销。`)) {
+        
+        // 1. 从 LocalStorage 移除
+        let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+        const oldLen = localRoles.length;
+        localRoles = localRoles.filter(r => r.id !== roleId);
+        
+        if (localRoles.length < oldLen) {
+            localStorage.setItem('user_templates', JSON.stringify(localRoles));
+            
+            // 2. 视觉反馈
+            const trash = document.getElementById('trash-can');
+            trash.classList.add('shaking');
+            setTimeout(() => trash.classList.remove('shaking'), 500);
+            
+            // 3. 刷新列表
+            if (window.RolePartsLibrary && window.RolePartsLibrary.loadUserRoles) {
+                window.RolePartsLibrary.loadUserRoles();
+            } else if (window.renderPartsGrid) {
+                window.renderPartsGrid();
+            }
+            
+            console.log(`🗑️ 已粉碎角色: ${roleId}`);
+        } else {
+            // 如果 Storage 里没找到，可能是在内存里 (旧版逻辑)
+            if (window.RolePartsLibrary?.userParts?.delete) {
+                window.RolePartsLibrary.userParts.delete(roleId);
+                // 强制刷新 UI
+                if (window.renderPartsGrid) window.renderPartsGrid();
+            }
+        }
+    }
+}
+
+// 自动启动
+document.addEventListener('DOMContentLoaded', initTrashCan);
 
