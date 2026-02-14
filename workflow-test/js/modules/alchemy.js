@@ -196,17 +196,9 @@ if (Array.isArray(enhancedData.actions)) {
         })
         .filter(a => a !== null); // 过滤掉无效的
 }
-
-// 如果清洗后没东西，就用兜底
-if (validActions.length === 0) {
-    validActions = [
-        { label: "⚡ 开始工作", prompt: `作为${enhancedData.name}，请开始你的工作：` },
-        { label: "💡 提供建议", prompt: "请针对当前情况提供你的专业建议：" }
-    ];
-}
-
-// 赋值回去
-enhancedData.actions = validActions;
+const data = await response.json(); // 获取后端返回的原始数据
+         console.log("🔥 [真·原始数据] 后端返回:", data);
+        return data;
 
         // 10. 消耗原料 (仅消耗用户自定义的角色)
         if (roleId.startsWith('user_') && RolePartsLibrary.userParts) {
@@ -811,6 +803,7 @@ function showToast(message, type = 'info') {
         toast.remove();
     }, 3000);
 }
+
 
 
 
