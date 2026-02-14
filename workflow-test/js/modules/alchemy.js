@@ -732,30 +732,34 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
-// ============ 工具函数补充 ============
-
-function showToast(message, type = 'info') {
-    // 优先尝试调用全局的 showToast (如果 ui.js 挂载了)
-    if (window.showToast) {
-        window.showToast(message, type);
-        return;
-    }
-
-    // 如果全局没有，自己造一个简单的
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8); color: white; padding: 10px 20px;
-        border-radius: 5px; z-index: 9999; font-size: 14px;
-        border: 1px solid ${type === 'error' ? '#ef4444' : '#10b981'};
-    `;
-    toast.innerText = message;
-    document.body.appendChild(toast);
+// ============ 辅助函数 (放在文件最底部的外面) ============
+function saveToLocal(role) {
+    role.id = `local_${Date.now()}`; // 生成本地 ID
+    role.is_local = true;            // 标记为本地
+    role.role_type = 'user';         // 标记为用户自制
     
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+    // 存 LocalStorage
+    let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+    localRoles.unshift(role);
+    localStorage.setItem('user_templates', JSON.stringify(localRoles));
+    
+    showToast(`✅ 角色 [${role.name}] 已存入本地背包`);
+    
+    // 立即更新左侧列表 UI (不用刷新页面)
+    if (window.RolePartsLibrary && RolePartsLibrary.userParts) {
+        RolePartsLibrary.userParts.create({
+            ...role,
+            category: 'custom',
+            color: '#8b5cf6',
+            apiTemplate: {
+                systemPrompt: role.prompt_template,
+                temperature: 0.7
+            }
+        });
+    }
 }
+
+
 
 
 
