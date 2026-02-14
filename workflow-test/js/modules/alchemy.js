@@ -355,7 +355,7 @@ export async function callRealAIForEnhancement(roleInfo, modelId) {
 
 
     // --- 分支 B: 云端模型 (走 Next.js 后台) ---
-    else {
+    }else {
         log(`🤖 请求云端炼丹 (Prompt 受保护)...`);
         try {
             // 👇 调试代码：打印 modelId 的详细信息
@@ -794,5 +794,6 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
