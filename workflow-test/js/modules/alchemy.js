@@ -114,87 +114,64 @@ if (typeof modelId === 'object') modelId = modelId.id || modelId.data?.id;
         // 调用下面的 callRealAIForEnhancement
        const enhancedData = await callRealAIForEnhancement({ name: roleName, id: roleId }, modelId);
       const newRoleName = enhancedData.name || `${roleName} (增强版)`;
-
-    // 1. 构造标准角色数据对象 (Warehouse 格式)
+// 1. 构造标准卡片数据
     const newRole = {
         name: newRoleName,
         description: enhancedData.description || `由 ${modelName} 增强`,
-        icon: rawRole.icon || 'fa-robot',
-        bg_class: 'role-ai', // 或者根据 color 转换
-        expertise: enhancedData.tags || [], // 对应 tags
-        prompt_template: `你是一个${newRoleName}。${enhancedData.description}`,
-        
-        // 保存 actions 和 capabilities
-        actions: enhancedData.actions,
-        capabilities: enhancedData.capabilities,
-        
-        role_type: 'user',
-        is_deletable: true,
+        icon: rawRole.icon || "fa-robot",
+        bg_class: "role-ai",
+        expertise: enhancedData.tags || enhancedData.expertise || [],
+        prompt_template: enhancedData.prompt || "",
+        actions: enhancedData.actions || [],
         created_at: new Date().toISOString()
     };
 
-    // 2. 兼容旧逻辑：添加到左侧库 (可选，保留为了让工厂UI立即显示)
-    if (window.RolePartsLibrary && RolePartsLibrary.userParts) {
-        RolePartsLibrary.userParts.create({
-            ...newRole,
-            category: 'custom',
-            color: '#8b5cf6',
-            apiTemplate: {
-                systemPrompt: newRole.prompt_template,
-                temperature: 0.7,
-                preferredModels: [modelId]
-            },
-            metadata: {
-                sourceRoleId: roleId,
-                enhancedByModel: modelId,
-                bornTime: newRole.created_at
-            }
-        });
-    }
-
-    // 3. ✨ 新逻辑：管理员特权检测 & 存仓库
-    let isAdmin = false;
-    let session = null;
-
+    // 2. 获取当前用户身份
+    let userEmail = '';
+    let token = '';
+    
     if (window.supabase) {
         const { data } = await window.supabase.auth.getSession();
-        session = data.session;
-        // ⚠️ 记得改这里的邮箱！
-        if (session?.user?.email === '57974422j@gmail.com') { 
-            isAdmin = true;
-        }
+        userEmail = data.session?.user?.email;
+        token = data.session?.access_token;
     }
 
-    if (isAdmin) {
-        // === 管理员：询问是否存云端 ===
-        if (confirm("👑 管理员特权：是否将此角色发布到【官方云端仓库】？\n(取消则仅存入本地)")) {
+    console.log("👤 当前炼丹师:", userEmail || "未登录");
+
+    // 3. 身份分流逻辑 (你的核心需求)
+    
+    // 👉 分支 A: 管理员 (z177...) -> 存云端
+    if (userEmail === 'z17756037070@gmail.com') {
+        if (confirm("👑 管理员大人：是否将此角色发布到【官方云端仓库】？\n(取消则仅存入本地)")) {
             try {
-                newRole.role_type = 'system';
-                newRole.is_deletable = false;
+                newRole.role_type = 'system'; // 标记为官方
+                newRole.is_deletable = false; // 标记不可删
                 
                 const res = await fetch(`${API_BASE}/api/roles`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify(newRole)
                 });
                 
-                if (!res.ok) throw new Error("云端存储失败");
+                if (!res.ok) throw new Error("云端上传失败");
                 const savedRole = await res.json();
+                
                 showToast(`🎉 [官方] 角色 ${savedRole.name} 已发布！`);
+                // 云端的不需要手动更新左侧栏，下次刷新就有了
                 
             } catch (e) {
-                console.error(e);
-                alert("发布失败: " + e.message + "\n已转存本地。");
-                saveToLocal(newRole);
+                alert("发布失败: " + e.message);
+                saveToLocal(newRole); // 失败兜底
             }
         } else {
-            saveToLocal(newRole);
+            saveToLocal(newRole); // 管理员选择了存本地
         }
-    } else {
-        // === 普通用户：存本地 ===
+    } 
+    // 👉 分支 B: 普通用户 (1902... 或其他人) -> 强制存本地
+    else {
         saveToLocal(newRole);
     }
         // 9. 成功反馈
@@ -261,17 +238,7 @@ enhancedData.actions = validActions;
         updateFurnaceDisplay();
     }
 }
-// --- 辅助函数 ---
-function saveToLocal(role) {
-    role.id = `local_${Date.now()}`; 
-    role.is_local = true;
-    
-    let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-    localRoles.unshift(role);
-    localStorage.setItem('user_templates', JSON.stringify(localRoles));
-    
-    showToast(`✅ 角色 [${role.name}] 已存入本地背包`);
-}
+
 export async function callRealAIForEnhancement(roleInfo, modelId) {
     const isLocal = modelId.startsWith('custom_') || modelId.includes('localhost');
     let enhancedData = null;
@@ -793,6 +760,32 @@ export async function runAgent(roleId, prompt) {
         throw e;
     }
 
+}
+// ============ 辅助函数 (放在文件最底部的外面) ============
+function saveToLocal(role) {
+    role.id = `local_${Date.now()}`; // 生成本地 ID
+    role.is_local = true;            // 标记为本地
+    role.role_type = 'user';         // 标记为用户自制
+    
+    // 存 LocalStorage
+    let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+    localRoles.unshift(role);
+    localStorage.setItem('user_templates', JSON.stringify(localRoles));
+    
+    showToast(`✅ 角色 [${role.name}] 已存入本地背包`);
+    
+    // 立即更新左侧列表 UI (不用刷新页面)
+    if (window.RolePartsLibrary && RolePartsLibrary.userParts) {
+        RolePartsLibrary.userParts.create({
+            ...role,
+            category: 'custom',
+            color: '#8b5cf6',
+            apiTemplate: {
+                systemPrompt: role.prompt_template,
+                temperature: 0.7
+            }
+        });
+    }
 }
 
 
