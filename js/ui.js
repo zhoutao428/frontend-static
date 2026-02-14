@@ -288,4 +288,75 @@ function editRoleName(roleId, currentName) {
         localStorage.setItem('custom_role_names', JSON.stringify(names));
         renderSidebar(); // 刷新
     });
+
 }
+// js/ui.js - 放在文件末尾或合适位置
+
+export function createRoleCardHTML(role) {
+    const isSystem = role.role_type === 'system' || !role.is_local;
+    const canDelete = role.is_local; // 只有本地角色可删
+
+    // 1. 标签 (Badge)
+    const badgeHtml = isSystem
+        ? `<span class="role-badge prebuild" style="background:#4f46e5;"><i class="fas fa-star"></i> 官方</span>`
+        : `<span class="role-badge user" style="background:#10b981;"><i class="fas fa-user"></i> 自制</span>`;
+
+    // 2. 技能标签 (Tags)
+    const tags = role.expertise || role.tags || [];
+    const tagsHtml = tags.slice(0, 3).map(t => `<span class="tag">${t}</span>`).join('');
+
+    // 3. 快捷指令按键 (Actions) - 这就是你想要的！
+    // 只有在侧边栏或主舞台才显示按键，仓库里可能不需要点击执行，只显示样子
+    let actionsHtml = '';
+    if (role.actions && role.actions.length > 0) {
+        actionsHtml = `<div class="role-actions">
+            ${role.actions.map(act => `
+                <button class="action-btn" onclick="executeRoleAction('${act.prompt}', '${role.name}')">
+                    <i class="fas fa-bolt"></i> ${act.label}
+                </button>
+            `).join('')}
+        </div>`;
+    }
+
+    // 4. 删除按钮
+    const deleteBtn = canDelete
+        ? `<button class="btn-icon danger" onclick="deleteRole('${role.id}', event)"><i class="fas fa-trash-alt"></i></button>`
+        : '';
+
+    // 5. 组合 HTML (保持和工厂一致的样式)
+    return `
+        <div class="part-card role-card" data-role-id="${role.id}" draggable="true">
+            <div class="part-header">
+                <div class="part-icon ${role.bg_class || 'role-dev'}">
+                    <i class="fas ${role.icon || 'fa-user'}"></i>
+                </div>
+                <div class="part-info">
+                    <div class="part-name">${role.name}</div>
+                    <div class="part-desc" title="${role.description}">${role.description || '暂无描述'}</div>
+                </div>
+                ${badgeHtml}
+            </div>
+            
+            <div class="part-tags">${tagsHtml}</div>
+            
+            <!-- ✨ 这里插入按键！ -->
+            ${actionsHtml}
+
+            <div class="part-footer">
+                <span class="id-tag">ID: ${role.id.slice(-4)}</span>
+                ${deleteBtn}
+            </div>
+        </div>
+    `;
+}
+
+// 还要补一个全局执行函数，防止按键点不动
+window.executeRoleAction = function(prompt, roleName) {
+    // 这里调用聊天窗口发送消息
+    // 假设你的聊天函数是 window.sendChatMessage
+    if (window.sendChatMessage) {
+        window.sendChatMessage(prompt);
+    } else {
+        alert(`[${roleName}] 准备执行: ${prompt}\n(聊天窗口未连接)`);
+    }
+};
