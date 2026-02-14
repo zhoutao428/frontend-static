@@ -1,120 +1,252 @@
-/* warehouse.css - 极简版 */
+/* =========================================================
+   Warehouse.css - 仓库页面全功能独立样式
+   (包含布局、组件、卡片，不依赖外部 CSS)
+   ========================================================= */
 
-/* 1. 主容器定位 (避开顶部导航栏) */
+/* --- 1. 全局重置 --- */
+body {
+    background-color: #0f172a; /* Slate-900 */
+    color: #f1f5f9;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    line-height: 1.5;
+    overflow-x: hidden;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* --- 2. 顶部导航 (复刻工厂风格) --- */
+.test-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    z-index: 100;
+}
+
+.test-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: #e2e8f0;
+}
+
+.test-header h1 i { color: #818cf8; }
+
+.test-controls button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+}
+
+.test-controls button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* --- 3. 仓库主布局 --- */
 .warehouse-container {
-    max-width: 1200px;
-    margin: 80px auto 0; 
-    padding: 20px;
+    max-width: 1400px;
+    margin: 80px auto 40px; /* 避开顶部 */
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-/* 2. 标签页样式 (Tab) */
+/* --- 4. 标签页 (Tabs) --- */
 .warehouse-tabs {
-    display: flex; gap: 20px; margin-bottom: 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-.warehouse-tabs .tab {
-    padding: 10px 20px; color: #94a3b8; cursor: pointer;
-    border-bottom: 2px solid transparent;
-}
-.warehouse-tabs .tab.active {
-    color: #fff; border-bottom-color: #6366f1;
+    display: flex;
+    gap: 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 3. 搜索栏 */
-.warehouse-search {
-    background: #1e293b; padding: 15px; border-radius: 12px;
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px;
+.tab {
+    padding: 12px 4px;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 15px;
+    font-weight: 500;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
 }
-.search-box { display: flex; align-items: center; gap: 10px; width: 300px; }
-.search-box input { background: transparent; border: none; color: white; width: 100%; outline: none; }
-/* === 角色卡片通用样式 (复刻工厂) === */
+
+.tab:hover { color: #e2e8f0; }
+.tab.active { color: #fff; font-weight: 600; }
+
+.tab.active::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 0;
+    width: 100%; height: 3px;
+    background: #6366f1;
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 -2px 10px rgba(99, 102, 241, 0.5);
+}
+
+.tab-count {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px; border-radius: 10px;
+    font-size: 12px; color: #cbd5e1;
+}
+.tab.active .tab-count { background: #6366f1; color: white; }
+
+/* --- 5. 搜索栏 --- */
+.warehouse-search {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #1e293b; padding: 16px 24px;
+    border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-box {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 16px; border-radius: 8px;
+    width: 320px; border: 1px solid transparent;
+    transition: all 0.3s;
+}
+.search-box:focus-within { border-color: #6366f1; background: rgba(0, 0, 0, 0.4); }
+.search-box input {
+    background: transparent; border: none; color: white;
+    width: 100%; outline: none; font-size: 14px;
+}
+.search-filter { font-size: 14px; color: #64748b; }
+
+/* --- 6. 卡片网格 --- */
+.parts-grid-container { margin-top: 10px; }
+.parts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* 卡片宽度 */
+    gap: 24px;
+    padding-bottom: 40px;
+}
+
+/* === ✨ 7. 角色卡片样式 (独立完整版) ✨ === */
 .part-card {
     background: #1e293b;
     border: 1px solid #334155;
     border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    overflow: hidden;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 16px;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    position: relative; overflow: hidden;
 }
+
 .part-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
     border-color: #6366f1;
 }
 
-/* 头部布局 */
-.part-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+/* 卡片头部 */
+.part-header { display: flex; align-items: center; gap: 14px; }
+
 .part-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
 }
-/* 几种预设颜色 */
+/* 配色方案 */
 .role-dev { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 .role-ai  { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
 .role-pm  { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
 
 .part-info { flex: 1; overflow: hidden; }
-.part-name { font-weight: 600; color: #f1f5f9; font-size: 15px; margin-bottom: 2px; }
-.part-desc { font-size: 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.part-name { font-weight: 600; color: #f1f5f9; font-size: 16px; margin-bottom: 4px; }
+.part-desc { 
+    font-size: 13px; color: #94a3b8; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 徽章 */
+.badge-wrapper { flex-shrink: 0; }
+.role-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+}
+.role-badge.prebuild { background: rgba(79, 70, 229, 0.2); color: #818cf8; border: 1px solid rgba(79, 70, 229, 0.3); }
+.role-badge.user { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
 
 /* 标签 */
 .part-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .tag {
-    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; padding: 3px 8px; border-radius: 4px;
     background: rgba(255, 255, 255, 0.05); color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* ✨ 技能按键 (新) */
+/* 技能按键 (Actions) */
 .role-actions {
-    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;
 }
 .action-btn {
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: #a5b4fc;
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    font-size: 12px; padding: 6px 10px;
+    border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
     transition: all 0.2s;
 }
 .action-btn:hover {
-    background: #6366f1;
-    color: white;
+    background: #6366f1; border-color: #6366f1; color: white;
 }
 
 /* 底部 */
 .part-footer {
-    margin-top: auto; /* 推到底部 */
-    padding-top: 12px;
+    margin-top: auto; padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
 }
-.id-tag { font-size: 10px; color: #475569; font-family: monospace; }
-.footer-btns { display: flex; gap: 8px; }
+.id-tag { font-size: 11px; color: #475569; font-family: 'JetBrains Mono', monospace; }
+
+.footer-btns { display: flex; gap: 8px; align-items: center; }
 .btn-icon {
-    background: none; border: none; color: #64748b; cursor: pointer; padding: 4px;
-    transition: color 0.2s;
+    background: transparent; border: none; padding: 6px;
+    color: #64748b; font-size: 14px; border-radius: 4px;
+    transition: all 0.2s;
 }
-.btn-icon:hover { color: #e2e8f0; }
-.btn-icon.danger:hover { color: #ef4444; }
+.btn-icon:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+.btn-icon.danger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+/* 8. 空状态 */
+.empty-state {
+    grid-column: 1 / -1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 80px 0;
+    color: #64748b; background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px; border: 2px dashed rgba(255, 255, 255, 0.05);
+}
+.empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.empty-state p { font-size: 16px; margin: 0; }
+
+/* 9. 加载动画 */
+.loading-state {
+    grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8;
+}
+.loading-state i { font-size: 24px; margin-bottom: 10px; color: #6366f1; }
