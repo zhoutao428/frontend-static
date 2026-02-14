@@ -240,21 +240,40 @@ export async function startAIAlchemy(roleItem, modelItem) {
     }
 }
 // ============ 3. 本地存储辅助函数 ============
-function saveToLocal(role) {
-    role.id = `local_${Date.now()}`; // 本地 ID
-    role.is_local = true;
-    
-    // 读取
-    let localRoles = [];
-    try {
-        localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-    } catch(e) { localRoles = []; }
+class RolePartsLibrary {
+    constructor() {
+        this.userParts = new PartsCollection('user-parts-container');
+        this.init();
+    }
 
-    // 写入
-    localRoles.unshift(role);
-    localStorage.setItem('user_templates', JSON.stringify(localRoles));
-    
-    showToast(`✅ 角色 [${role.name}] 已存入本地背包`);
+    init() {
+        // ... 加载预设 ...
+
+        // ✅ 关键：加载本地存储的用户角色
+        this.loadUserRoles();
+    }
+
+    loadUserRoles() {
+        try {
+            // 必须和 saveToLocal 里的 Key 一致！('user_templates')
+            const savedRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+            
+            // 清空旧数据 (防止重复)
+            this.userParts.items = []; 
+            
+            // 重新添加
+            savedRoles.forEach(role => {
+                this.userParts.add(role); 
+            });
+            
+            // 渲染到 DOM
+            this.userParts.render();
+            
+            console.log(`📚 已加载 ${savedRoles.length} 个本地角色`);
+        } catch (e) {
+            console.error("加载本地角色失败:", e);
+        }
+    }
 }
 export async function callRealAIForEnhancement(roleInfo, modelId) {
     const isLocal = modelId.startsWith('custom_') || modelId.includes('localhost');
@@ -785,6 +804,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
