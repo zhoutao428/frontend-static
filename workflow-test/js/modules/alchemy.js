@@ -787,6 +787,31 @@ function saveToLocal(role) {
         });
     }
 }
+// ============ 工具函数补充 ============
+
+function showToast(message, type = 'info') {
+    // 优先尝试调用全局的 showToast (如果 ui.js 挂载了)
+    if (window.showToast) {
+        window.showToast(message, type);
+        return;
+    }
+
+    // 如果全局没有，自己造一个简单的
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8); color: white; padding: 10px 20px;
+        border-radius: 5px; z-index: 9999; font-size: 14px;
+        border: 1px solid ${type === 'error' ? '#ef4444' : '#10b981'};
+    `;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
 
 
 
