@@ -113,48 +113,90 @@ if (typeof modelId === 'object') modelId = modelId.id || modelId.data?.id;
         
         // 调用下面的 callRealAIForEnhancement
        // ...
-    const enhancedData = await callRealAIForEnhancement(rawRole, modelId);
+      const newRoleName = enhancedData.name || `${roleName} (增强版)`;
 
-    if (!enhancedData) throw new Error("AI未返回有效数据");
-    console.log("【调试】AI返回的数据:", enhancedData); // 👈 加这行
-    console.log("【调试】actions 字段:", enhancedData.actions); // 👈 加这行
-// 🛡️ 强制兜底：如果没技能，必须补上！
-    if (!enhancedData.actions || !Array.isArray(enhancedData.actions) || enhancedData.actions.length === 0) {
-    console.log("【调试】触发兜底补丁！"); // 👈 加这行
-    console.warn("⚠️ AI未生成技能，正在应用兜底补丁...");
-    enhancedData.actions = [
-        { label: "⚡ 开始工作", prompt: `作为${enhancedData.name || roleName}，请开始你的工作：` },
-        { label: "💡 提供建议", prompt: "请针对当前情况提供你的专业建议：" }
-    ];
-}
-
-    const newRoleName = enhancedData.name || `${roleName} (增强版)`;
-
-    if (window.RolePartsLibrary && RolePartsLibrary.userParts) {
-    RolePartsLibrary.userParts.create({
+    // 1. 构造标准角色数据对象 (Warehouse 格式)
+    const newRole = {
         name: newRoleName,
-        category: 'custom',
-        icon: rawRole.icon || 'fa-robot',
-        color: '#8b5cf6',
-        tags: enhancedData.tags || [],
         description: enhancedData.description || `由 ${modelName} 增强`,
-        capabilities: enhancedData.capabilities || { core: [] },
+        icon: rawRole.icon || 'fa-robot',
+        bg_class: 'role-ai', // 或者根据 color 转换
+        expertise: enhancedData.tags || [], // 对应 tags
+        prompt_template: `你是一个${newRoleName}。${enhancedData.description}`,
         
-        // ⚠️ 关键：必须显式传入 actions
-        actions: enhancedData.actions, 
+        // 保存 actions 和 capabilities
+        actions: enhancedData.actions,
+        capabilities: enhancedData.capabilities,
         
-        apiTemplate: {
-                    systemPrompt: `你是一个${newRoleName}。${enhancedData.description}`,
-                    temperature: 0.7,
-                    preferredModels: [modelId]
-                },
-                metadata: {
-                    sourceRoleId: roleId,
-                    enhancedByModel: modelId,
-                    bornTime: new Date().toISOString()
-                }
-            });
-        }        
+        role_type: 'user',
+        is_deletable: true,
+        created_at: new Date().toISOString()
+    };
+
+    // 2. 兼容旧逻辑：添加到左侧库 (可选，保留为了让工厂UI立即显示)
+    if (window.RolePartsLibrary && RolePartsLibrary.userParts) {
+        RolePartsLibrary.userParts.create({
+            ...newRole,
+            category: 'custom',
+            color: '#8b5cf6',
+            apiTemplate: {
+                systemPrompt: newRole.prompt_template,
+                temperature: 0.7,
+                preferredModels: [modelId]
+            },
+            metadata: {
+                sourceRoleId: roleId,
+                enhancedByModel: modelId,
+                bornTime: newRole.created_at
+            }
+        });
+    }
+
+    // 3. ✨ 新逻辑：管理员特权检测 & 存仓库
+    let isAdmin = false;
+    let session = null;
+
+    if (window.supabase) {
+        const { data } = await window.supabase.auth.getSession();
+        session = data.session;
+        // ⚠️ 记得改这里的邮箱！
+        if (session?.user?.email === '57974422j@gmail.com') { 
+            isAdmin = true;
+        }
+    }
+
+    if (isAdmin) {
+        // === 管理员：询问是否存云端 ===
+        if (confirm("👑 管理员特权：是否将此角色发布到【官方云端仓库】？\n(取消则仅存入本地)")) {
+            try {
+                newRole.role_type = 'system';
+                newRole.is_deletable = false;
+                
+                const res = await fetch(`${API_BASE}/api/roles`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify(newRole)
+                });
+                
+                if (!res.ok) throw new Error("云端存储失败");
+                const savedRole = await res.json();
+                showToast(`🎉 [官方] 角色 ${savedRole.name} 已发布！`);
+                
+            } catch (e) {
+                console.error(e);
+                alert("发布失败: " + e.message + "\n已转存本地。");
+                saveToLocal(newRole);
+            }
+        } else {
+            saveToLocal(newRole);
+        }
+    } else {
+        // === 普通用户：存本地 ===
+        saveToLocal(newRole);
+    }
         // 9. 成功反馈
         log(`✅ 炼丹成功！新角色 [${newRoleName}] 已生成`);
         // 🧼 数据清洗：确保 actions 格式正确
@@ -219,7 +261,17 @@ enhancedData.actions = validActions;
         updateFurnaceDisplay();
     }
 }
-
+// --- 辅助函数 ---
+function saveToLocal(role) {
+    role.id = `local_${Date.now()}`; 
+    role.is_local = true;
+    
+    let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+    localRoles.unshift(role);
+    localStorage.setItem('user_templates', JSON.stringify(localRoles));
+    
+    showToast(`✅ 角色 [${role.name}] 已存入本地背包`);
+}
 export async function callRealAIForEnhancement(roleInfo, modelId) {
     const isLocal = modelId.startsWith('custom_') || modelId.includes('localhost');
     let enhancedData = null;
@@ -246,18 +298,26 @@ export async function callRealAIForEnhancement(roleInfo, modelId) {
 
 
         
-        try {
-            // 发送 fetch 请求到本地 Ollama
+                try {
+            console.log("🦙 正在调用本地模型:", modelConfig.model);
+            
+            // 构造更强的 System Prompt，强制 JSON
+            const systemPrompt = "你是一个JSON生成器。只返回纯JSON，不要包含Markdown标记，不要包含任何解释性文字。";
+            
             const response = await fetch(modelConfig.endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: modelConfig.model,
-                    messages: [{ role: 'user', content: simplePrompt }],
-                    stream: false
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: simplePrompt }
+                    ],
+                    stream: false,
+                    format: "json" // 👈 关键！Ollama 新版支持强制 JSON 模式
                 })
             });
-            
+
             if (!response.ok) {
                 const errText = await response.text();
                 throw new Error(`本地模型连接失败 (${response.status}): ${errText}`);
@@ -265,19 +325,34 @@ export async function callRealAIForEnhancement(roleInfo, modelId) {
 
             const data = await response.json();
             
-            // 解析内容 (兼容不同 Ollama 版本返回格式)
-            const content = data.message ? data.message.content : (data.choices && data.choices[0] ? data.choices[0].message.content : null);
+            // 兼容性提取
+            let content = data.message?.content || data.response; // Ollama 有时候用 response 字段
             
             if (!content) throw new Error("Ollama 返回内容为空");
-            
-            // 解析 JSON
-            enhancedData = parseJSONSafe(content);
+
+            console.log("🦙 原始返回:", content);
+
+            // 清洗 Markdown (以防万一)
+            content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            enhancedData = JSON.parse(content); // 这里的 parseJSONSafe 改回 JSON.parse，因为我们已经清洗了
 
         } catch (err) {
-            console.error("本地炼丹失败:", err);
-            throw err; // 抛出给上层处理
+            console.error("❌ 本地炼丹失败:", err);
+            // 失败后不应该 throw，而是应该让它降级去用“白板数据”或者提示用户
+            // 如果 throw，整个流程就断了
+            alert(`本地模型调用失败: ${err.message}，将使用基础模板。`);
+            
+            // 兜底数据
+            enhancedData = {
+                name: roleName,
+                description: "本地模型生成失败，这是默认描述。",
+                expertise: ["基础能力"],
+                tone: "默认",
+                prompt: "你是一个助手。"
+            };
         }
-    } 
+
 
     // --- 分支 B: 云端模型 (走 Next.js 后台) ---
     else {
@@ -719,3 +794,4 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
