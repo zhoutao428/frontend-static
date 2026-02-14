@@ -239,6 +239,43 @@ export async function startAIAlchemy(roleItem, modelItem) {
         }
     }
 }
+
+// ============ 3. 本地存储辅助函数 ============
+class RolePartsLibrary {
+    constructor() {
+        this.userParts = new PartsCollection('user-parts-container');
+        this.init();
+    }
+
+    init() {
+        // ... 加载预设 ...
+
+        // ✅ 关键：加载本地存储的用户角色
+        this.loadUserRoles();
+    }
+
+    loadUserRoles() {
+        try {
+            // 必须和 saveToLocal 里的 Key 一致！('user_templates')
+            const savedRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+            
+            // 清空旧数据 (防止重复)
+            this.userParts.items = []; 
+            
+            // 重新添加
+            savedRoles.forEach(role => {
+                this.userParts.add(role); 
+            });
+            
+            // 渲染到 DOM
+            this.userParts.render();
+            
+            console.log(`📚 已加载 ${savedRoles.length} 个本地角色`);
+        } catch (e) {
+            console.error("加载本地角色失败:", e);
+        }
+    }
+}
 function saveToLocal(role) {
     // 1. 生成本地 ID (如果还没有)
     if (!role.id || !role.id.startsWith('local_')) {
@@ -287,42 +324,6 @@ function saveToLocal(role) {
 }
 
 
-// ============ 3. 本地存储辅助函数 ============
-class RolePartsLibrary {
-    constructor() {
-        this.userParts = new PartsCollection('user-parts-container');
-        this.init();
-    }
-
-    init() {
-        // ... 加载预设 ...
-
-        // ✅ 关键：加载本地存储的用户角色
-        this.loadUserRoles();
-    }
-
-    loadUserRoles() {
-        try {
-            // 必须和 saveToLocal 里的 Key 一致！('user_templates')
-            const savedRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-            
-            // 清空旧数据 (防止重复)
-            this.userParts.items = []; 
-            
-            // 重新添加
-            savedRoles.forEach(role => {
-                this.userParts.add(role); 
-            });
-            
-            // 渲染到 DOM
-            this.userParts.render();
-            
-            console.log(`📚 已加载 ${savedRoles.length} 个本地角色`);
-        } catch (e) {
-            console.error("加载本地角色失败:", e);
-        }
-    }
-}
 export async function callRealAIForEnhancement(roleInfo, modelId) {
     const isLocal = modelId.startsWith('custom_') || modelId.includes('localhost');
     let enhancedData = null;
@@ -852,6 +853,7 @@ export async function runAgent(roleId, prompt) {
     }
 
 }
+
 
 
 
