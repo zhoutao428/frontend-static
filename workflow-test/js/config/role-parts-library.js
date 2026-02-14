@@ -32,10 +32,18 @@ const RolePartsLibrary = {
         
         // 初始化：从 LocalStorage 加载
         init() {
-            const saved = localStorage.getItem('user_created_parts');
+            // ✅ 必须改为 'user_templates'，这才是炼丹炉和仓库用的Key！
+            const saved = localStorage.getItem('user_templates');
             if (saved) {
                 try {
-                    this._parts = JSON.parse(saved);
+                    const parsed = JSON.parse(saved);
+                    // 兼容数组格式 (炼丹炉存的是数组，这里转成对象)
+                    if (Array.isArray(parsed)) {
+                        this._parts = {};
+                        parsed.forEach(p => this._parts[p.id] = p);
+                    } else {
+                        this._parts = parsed; // 兼容旧的对象格式
+                    }
                 } catch (e) {
                     console.error('加载用户零件失败', e);
                     this._parts = {};
@@ -45,9 +53,10 @@ const RolePartsLibrary = {
 
         // 保存到 LocalStorage
         _save() {
-            localStorage.setItem('user_created_parts', JSON.stringify(this._parts));
+            // ✅ 必须存为数组格式！因为炼丹炉和仓库都是按数组读的
+            const arrayData = Object.values(this._parts);
+            localStorage.setItem('user_templates', JSON.stringify(arrayData));
         },
-
         // 获取所有用户零件 (数组)
         getAll() {
             return Object.values(this._parts);
@@ -216,3 +225,13 @@ if (typeof window !== 'undefined') {
     window.RolePartsLibrary = RolePartsLibrary;
     console.log("📚 角色库 (RolePartsLibrary) 已加载");
 }
+// ✅ 兼容性补丁：给 alchemy.js 提供刷新接口
+if (window.RolePartsLibrary) {
+    window.RolePartsLibrary.loadUserRoles = function() {
+        console.log("🔄 收到刷新指令，重新加载左侧列表...");
+        this.userParts.init(); // 重新读 LocalStorage
+        // 这里可能还需要触发 UI 渲染，假设有个全局渲染函数
+        if (window.renderPartsGrid) window.renderPartsGrid(); 
+    };
+}
+
