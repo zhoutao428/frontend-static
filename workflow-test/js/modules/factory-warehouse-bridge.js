@@ -1,7 +1,5 @@
 // js/modules/factory-warehouse-bridge.js
 
-import { RolePartsLibrary } from './role-parts-library.js';
-
 function decorateRoleCardWithFactoryButton(card, roleId) {
     const existingBtn = card.querySelector('.factory-to-warehouse-btn');
     if (existingBtn) return;
@@ -51,3 +49,4 @@ function decorateRoleCardWithFactoryButton(card, roleId) {
 
 // ⚠️ 手动挂载
 window.decorateRoleCardWithFactoryButton = decorateRoleCardWithFactoryButton;
+
