@@ -210,15 +210,6 @@ export async function renderAICategories() {
             </div>`;
         }
 
-        container.innerHTML = html;
-        console.log("✅ 渲染完成！");
-
-    } catch (e) {
-        console.error("渲染出错:", e);
-    }
-}
-
-        
         // 3. 重新初始化拖拽
         if (window.DragDrop && window.DragDrop.initializeDragAndDrop) {
             window.DragDrop.initializeDragAndDrop();
@@ -484,6 +475,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
