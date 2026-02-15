@@ -200,11 +200,6 @@ export async function renderAICategories() {
             window.DragDrop.initializeDragAndDrop();
         }
 
-    } catch (e) {
-        console.error("渲染模型列表出错:", e);
-    }
-}
-
         // 4. 追加本地自定义模型 (保持不变)
         if (window.modelAPIConfigs) {
             const customModelsHTML = Array.from(window.modelAPIConfigs.entries())
@@ -465,6 +460,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
