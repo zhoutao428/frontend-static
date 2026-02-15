@@ -136,99 +136,74 @@ window.deleteLocalRole = function(roleId, event) {
 
 
 // 渲染右侧 AI 引擎库 (含状态检测)
-// ui.js - 重构后的 renderAICategories
+// ui.js - renderAICategories (完美适配版)
 
 export async function renderAICategories() {
-    const container = document.getElementById('ai-categories'); // ✅ 您的 HTML 容器 ID
+    const container = document.getElementById('ai-categories');
     if(!container) return;
 
-    // 显示加载中...
-    container.innerHTML = '<div style="padding:20px; text-align:center; color:#888;"><i class="fas fa-spinner fa-spin"></i> 正在从云端加载模型...</div>';
-
     try {
-        // 1. 🚀 直接从 Supabase 数据库获取模型列表
-        // 假设表名是 'models'，请根据实际情况修改
-        const { data: realModels, error } = await window.supabase
+        // 1. 获取数据 (使用正确的表名 ai_models)
+        const { data: models, error } = await window.supabase
             .from('ai_models')
             .select('*')
-            .order('provider'); // 按供应商排序
+            .order('sort_order', { ascending: true }); // 按您的 sort_order 排序
 
-        if (error) throw error;
-        if (!realModels || realModels.length === 0) {
-            container.innerHTML = '<div style="padding:20px; text-align:center;">暂无可用模型</div>';
+        if (error || !models) {
+            console.error("加载模型失败:", error);
+            container.innerHTML = '<div style="padding:10px;">加载失败</div>';
             return;
         }
 
-        // 2. 🧠 动态分组算法 (不再写死分类！)
-        // 只要后台加了新厂商，这里自动就有了
-        const categories = {};
-        
-        realModels.forEach(m => {
-            const provider = m.provider || 'unknown';
-            if (!categories[provider]) {
-                categories[provider] = {
-                    id: provider,
-                    name: getProviderDisplayName(provider), // 辅助函数：把 'openai' 转成 'OpenAI'
-                    icon: getProviderIcon(provider),       // 辅助函数：获取对应图标
-                    models: []
-                };
-            }
+        // 2. 渲染 HTML (字段名已完全匹配)
+        container.innerHTML = models.map(model => {
+            // 🎨 图标匹配逻辑
+            let iconClass = 'fa-robot'; // 默认图标
+            let iconColor = '#3b82f6';  // 默认蓝色
             
-            // 构造模型对象 (适配您的 UI 字段)
-            categories[provider].models.push({
-                id: m.id,
-                name: m.display_name || m.name, // 兼容不同字段名
-                provider: provider,
-                price: m.sale_price || 0,
-                typeIcon: m.model_type === 'image' ? '🎨' : (m.model_type === 'tts' ? '🗣️' : ''),
-                color: getProviderColor(provider)   // 辅助函数：获取主题色
-            });
-        });
+            if (model.provider === 'openai') { iconClass = 'fa-bolt'; iconColor = '#10b981'; }
+            if (model.provider === 'google') { iconClass = 'fa-google'; iconColor = '#ea4335'; }
+            if (model.provider === 'deepseek') { iconClass = 'fa-code'; iconColor = '#8b5cf6'; }
+            if (model.provider === 'anthropic') { iconClass = 'fa-brain'; iconColor = '#d97706'; }
 
-        // 3. 生成 HTML (完全复用您的原版样式结构)
-        let html = Object.values(categories).map(cat => `
-            <div class="ai-category expanded">
-                <div class="ai-category-header" onclick="this.parentElement.classList.toggle('expanded')">
-                    <i class="fas fa-chevron-right"></i>
-                    <i class="fas ${cat.icon}"></i>
-                    <span>${cat.name}</span>
+            // 🏷️ ID 使用 model_code，这才是真正调用时需要的 ID
+            const modelId = model.model_code;
+
+            return `
+            <div class="role-card model-card" 
+                 draggable="true" 
+                 data-id="${modelId}" 
+                 data-type="model"
+                 data-provider="${model.provider}"
+                 ondragstart="window.onRoleDragStart(event)">
+                
+                <div class="role-icon" style="background: ${iconColor}">
+                    <i class="fas ${iconClass}"></i>
                 </div>
-                <div class="ai-models">
-                    ${cat.models.map(model => `
-                        <div class="ai-model-card"
-                             draggable="true"
-                             data-model-id="${model.id}" 
-                             ondragstart="window.onModelDragStart(event)"
-                             ondragend="window.onDragEnd(event)">
-                            
-                            <div class="model-icon" style="background: ${model.color}">
-                                ${model.name.charAt(0).toUpperCase()}
-                            </div>
-                            
-                            <div class="model-info">
-                                <div class="model-name">
-                                    ${model.typeIcon} ${model.name}
-                                </div>
-                                <div class="model-provider">
-                                    <i class="fas fa-coins" style="color:#fbbf24;margin-right:4px"></i>
-                                    ${model.price} 积分
-                                </div>
-                            </div>
-                            
-                            <!-- 状态灯 -->
-                            <div class="model-api-status" id="status-${model.id}" title="检测中...">
-                                <i class="fas fa-circle" style="color:#64748b; font-size:10px;"></i>
-                            </div>
-                            
-                            <!-- 锁定按钮 (云端模型默认锁定) -->
-                            <button class="model-config-btn" style="opacity:0.3; cursor:not-allowed">
-                                <i class="fas fa-lock"></i>
-                            </button>
-                        </div>
-                    `).join('')}
+                
+                <div class="role-info">
+                    <div class="role-name">${model.display_name}</div>
+                    <div class="role-desc">
+                        ${model.provider} · ${model.sale_price || 0} 积分
+                    </div>
+                </div>
+                
+                <div class="role-actions">
+                    <i class="fas fa-circle" style="color:#10b981; font-size:10px;" title="正常"></i>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
+        
+        // 3. 重新初始化拖拽
+        if (window.DragDrop && window.DragDrop.initializeDragAndDrop) {
+            window.DragDrop.initializeDragAndDrop();
+        }
+
+    } catch (e) {
+        console.error("渲染模型列表出错:", e);
+    }
+}
 
         // 4. 追加本地自定义模型 (保持不变)
         if (window.modelAPIConfigs) {
@@ -490,6 +465,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
