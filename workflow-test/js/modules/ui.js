@@ -137,35 +137,36 @@ export async function renderAICategories() {
     const container = document.getElementById('ai-categories');
     if (!container) return;
 
-    console.log("🚀 开始渲染右侧模型列表..."); // 调试日志
+    console.log("🚀 开始渲染右侧模型列表...");
 
     try {
-        // 1. 取数据
+        // ============================================================
+        // 1. 获取云端模型 (从 Supabase ai_models 表)
+        // ============================================================
         const { data: models, error } = await window.supabase
             .from('ai_models')
             .select('*')
             .order('provider');
 
-        if (error || !models) {
-            console.error("数据获取失败:", error);
-            container.innerHTML = '<div style="padding:10px;">加载失败</div>';
-            return;
+        if (error) console.error("云端模型获取失败:", error);
+        
+        // 准备分组数据
+        const groups = {};
+        
+        // 如果有云端数据，进行分组
+        if (models && models.length > 0) {
+            models.forEach(m => {
+                const p = m.provider || '其他';
+                if (!groups[p]) groups[p] = [];
+                groups[p].push(m);
+            });
         }
 
-        console.log(`✅ 获取到 ${models.length} 个模型，开始分组...`);
-
-        // 2. 自动分组 (为了适配您的 CSS 分类样式)
-        const groups = {};
-        models.forEach(m => {
-            const p = m.provider || '其他';
-            if (!groups[p]) groups[p] = [];
-            groups[p].push(m);
-        });
-
-        // 3. 渲染分组 HTML (硬编码样式是为了临时显示，等您改了数据库这里就可以删了)
+        // ============================================================
+        // 2. 生成云端模型的 HTML
+        // ============================================================
         let html = '';
         for (const [provider, items] of Object.entries(groups)) {
-            // 临时样式字典
             const styleMap = {
                 'google': { icon: 'fa-google', color: '#ea4335', name: 'Google' },
                 'openai': { icon: 'fa-bolt', color: '#10b981', name: 'OpenAI' },
@@ -174,7 +175,6 @@ export async function renderAICategories() {
             };
             const style = styleMap[provider] || { icon: 'fa-robot', color: '#64748b', name: provider.toUpperCase() };
 
-            // 生成 HTML
             html += `
             <div class="ai-category expanded">
                 <div class="ai-category-header" onclick="this.parentElement.classList.toggle('expanded')">
@@ -188,8 +188,7 @@ export async function renderAICategories() {
                              draggable="true"
                              data-id="${m.model_code}"    
                              data-provider="${m.provider}"
-                             ondragstart="window.onRoleDragStart(event)"> <!-- 复用拖拽逻辑 -->
-                            
+                             ondragstart="window.onRoleDragStart(event)">
                             <div class="model-icon" style="background: ${style.color}">
                                 ${m.display_name.charAt(0)}
                             </div>
@@ -203,28 +202,31 @@ export async function renderAICategories() {
             </div>`;
         }
 
-        // 3. 重新初始化拖拽
-        if (window.DragDrop && window.DragDrop.initializeDragAndDrop) {
-            window.DragDrop.initializeDragAndDrop();
-        }
-
-        // 4. 追加本地自定义模型 (保持不变)
+        // ============================================================
+        // 3. 💡 补回：本地自定义模型 (window.modelAPIConfigs)
+        // ============================================================
         if (window.modelAPIConfigs) {
             const customModelsHTML = Array.from(window.modelAPIConfigs.entries())
                 .filter(([id]) => id.startsWith('custom_'))
                 .map(([id, config]) => `
-                    <div class="ai-model-card" draggable="true" data-model-id="${id}" 
-                         ondragstart="window.onModelDragStart(event)" ondragend="window.onDragEnd(event)">
+                    <div class="ai-model-card" 
+                         draggable="true" 
+                         data-id="${id}" 
+                         data-provider="local"
+                         ondragstart="window.onRoleDragStart(event)">
                         <div class="model-icon" style="background: #f59e0b">L</div>
                         <div class="model-info">
                             <div class="model-name">${config.displayName || '自定义模型'}</div>
                             <div class="model-provider">本地</div>
                         </div>
                         <div class="model-api-status configured" title="本地配置"><i class="fas fa-plug"></i></div>
-                        <button class="model-config-btn" onclick="window.showModelAPIConfig('${id}', event)"><i class="fas fa-cog"></i></button>
+                        <button class="model-config-btn" onclick="window.showModelAPIConfig('${id}', event)">
+                            <i class="fas fa-cog"></i>
+                        </button>
                     </div>
                 `).join('');
 
+            // 如果有本地模型，插到最前面
             if (customModelsHTML) {
                 html = `
                 <div class="ai-category expanded" style="border-left: 3px solid #f59e0b;">
@@ -233,30 +235,30 @@ export async function renderAICategories() {
                         <span>自定义模型 (本地)</span>
                     </div>
                     <div class="ai-models">${customModelsHTML}</div>
-                </div>` + html; // 把本地模型插到最前面
+                </div>` + html;
             }
         }
-        
-        // 5. 添加“新建模型”按钮
-        const addBtn = document.createElement('div');
-        addBtn.className = 'ai-model-card add-new'; // 保持样式一致
-        addBtn.style.justifyContent = 'center';
-        addBtn.style.cursor = 'pointer';
-        addBtn.innerHTML = `<i class="fas fa-plus-circle" style="margin-right:8px;"></i> 添加本地模型`;
-        addBtn.onclick = () => {
-            if(window.Modals && window.Modals.addCustomModel) window.Modals.addCustomModel();
-        };
-        // 这里需要找个地方放按钮，通常放在最后或者单独一个区域
-        // container.appendChild(addBtn); // 这里暂不追加，因为现在的结构是分组的
 
-        // 6. 启动状态检测
-        Object.values(categories).forEach(cat => {
-            cat.models.forEach(model => checkModelHealth(model.id, model.provider));
-        });
+        // ============================================================
+        // 4. 💡 补回：添加模型按钮
+        // ============================================================
+        // 创建一个包裹容器来放按钮，或者直接追加到 HTML 底部
+        html += `
+        <div class="ai-model-card add-new" 
+             style="justify-content:center; cursor:pointer; margin-top:10px; border:1px dashed #666;"
+             onclick="window.Modals.addCustomModel && window.Modals.addCustomModel()">
+            <i class="fas fa-plus-circle" style="margin-right:8px;"></i> 添加本地模型
+        </div>`;
 
-    } catch (err) {
-        console.error("加载模型失败:", err);
-        container.innerHTML = '<div style="padding:20px; color:#ef4444;">加载失败，请检查网络</div>';
+        // ============================================================
+        // 5. 最终渲染
+        // ============================================================
+        container.innerHTML = html;
+        console.log("✅ 渲染完成！(含本地模型)");
+
+    } catch (e) {
+        console.error("渲染出错:", e);
+        container.innerHTML = '<div style="color:red; padding:10px;">渲染发生错误</div>';
     }
 }
 
@@ -465,6 +467,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
