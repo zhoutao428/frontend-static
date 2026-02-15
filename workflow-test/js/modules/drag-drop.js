@@ -11,13 +11,13 @@ export function initializeDragAndDrop() {
 
     // 1. 设置可拖拽源 (Draggables)
     // ---------------------------------------------------------
-    const draggables = document.querySelectorAll('.part-card, .model-card');
-    draggables.forEach(draggable => {
+    const draggables = document.querySelectorAll('.role-card'); // ✅ 统一监听所有 role-card
+        draggables.forEach(draggable => {
         draggable.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', JSON.stringify({
                 id: draggable.dataset.id,
                 type: draggable.dataset.type,
-                name: draggable.querySelector('.part-name, .model-name')?.innerText || '未知'
+                name: draggable.querySelector('.role-name, .model-name')?.innerText || '未知'
             }));
             e.dataTransfer.effectAllowed = 'copy';
             draggable.classList.add('dragging');
@@ -167,3 +167,4 @@ function handleBindingDrop(modelItem, targetRoleCard) {
         // localStorage.setItem('user_bindings', JSON.stringify(Array.from(window.bindings.entries())));
     }
 }
+
