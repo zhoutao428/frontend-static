@@ -287,3 +287,28 @@ export function renderGroups() {
     // 如果您原来的 ui.js 里有 renderGroups 的具体实现，请把它加在这里
     console.log("渲染组装台:", window.builderData);
 }
+// -----------------------------------------------------------------------------
+// 💡 修复：补上 updateApiStatus 函数
+// -----------------------------------------------------------------------------
+export function updateApiStatus() {
+    // 遍历所有角色卡片
+    const cards = document.querySelectorAll('.part-card');
+    cards.forEach(card => {
+        const roleId = card.dataset.id;
+        // 检查全局配置中是否有该角色的配置
+        const hasConfig = window.apiConfigs && window.apiConfigs.has(roleId);
+        
+        // 找到配置按钮的图标
+        const configIcon = card.querySelector('.api-config-btn i');
+        if (configIcon) {
+            if (hasConfig) {
+                // 如果已配置，变成绿色，表示就绪
+                configIcon.style.color = '#10b981'; 
+            } else {
+                // 否则恢复默认颜色
+                configIcon.style.color = '';
+            }
+        }
+    });
+}
+
