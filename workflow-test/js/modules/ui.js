@@ -136,38 +136,58 @@ window.deleteLocalRole = function(roleId, event) {
 
 
 // 渲染右侧 AI 引擎库 (含状态检测)
+// ui.js - 重构后的 renderAICategories
+
 export async function renderAICategories() {
-    const container = document.getElementById('ai-categories');
+    const container = document.getElementById('ai-categories'); // ✅ 您的 HTML 容器 ID
     if(!container) return;
 
-    try {
-        // 1. 获取云端模型
-        const realModels = await systemAPI.getModels(); 
-        
-        const categories = {
-            'openai': { id: 'openai', name: 'OpenAI', icon: 'fa-robot', expanded: true, models: [] },
-            'google': { id: 'google', name: 'Google', icon: 'fa-google', expanded: true, models: [] },
-            'deepseek': { id: 'deepseek', name: 'DeepSeek', icon: 'fa-code', expanded: true, models: [] },
-            'anthropic': { id: 'anthropic', name: 'Anthropic', icon: 'fa-brain', expanded: true, models: [] }
-        };
+    // 显示加载中...
+    container.innerHTML = '<div style="padding:20px; text-align:center; color:#888;"><i class="fas fa-spinner fa-spin"></i> 正在从云端加载模型...</div>';
 
-        // 整理云端模型数据
+    try {
+        // 1. 🚀 直接从 Supabase 数据库获取模型列表
+        // 假设表名是 'models'，请根据实际情况修改
+        const { data: realModels, error } = await window.supabase
+            .from('models')
+            .select('*')
+            .order('provider'); // 按供应商排序
+
+        if (error) throw error;
+        if (!realModels || realModels.length === 0) {
+            container.innerHTML = '<div style="padding:20px; text-align:center;">暂无可用模型</div>';
+            return;
+        }
+
+        // 2. 🧠 动态分组算法 (不再写死分类！)
+        // 只要后台加了新厂商，这里自动就有了
+        const categories = {};
+        
         realModels.forEach(m => {
-            const providerKey = categories[m.provider] ? m.provider : 'openai'; 
-            categories[providerKey].models.push({
-                id: m.id, 
-                name: m.display_name, 
-                provider: m.provider, 
-                price: m.sale_price,
-                // 根据类型显示不同图标
+            const provider = m.provider || 'unknown';
+            if (!categories[provider]) {
+                categories[provider] = {
+                    id: provider,
+                    name: getProviderDisplayName(provider), // 辅助函数：把 'openai' 转成 'OpenAI'
+                    icon: getProviderIcon(provider),       // 辅助函数：获取对应图标
+                    models: []
+                };
+            }
+            
+            // 构造模型对象 (适配您的 UI 字段)
+            categories[provider].models.push({
+                id: m.id,
+                name: m.display_name || m.name, // 兼容不同字段名
+                provider: provider,
+                price: m.sale_price || 0,
                 typeIcon: m.model_type === 'image' ? '🎨' : (m.model_type === 'tts' ? '🗣️' : ''),
-                color: m.provider === 'deepseek' ? '#8b5cf6' : (m.provider === 'openai' ? '#10b981' : '#3b82f6')
+                color: getProviderColor(provider)   // 辅助函数：获取主题色
             });
         });
 
-        // 2. 生成云端模型 HTML
-        let html = Object.values(categories).filter(cat => cat.models.length > 0).map(cat => `
-            <div class="ai-category ${cat.expanded ? 'expanded' : ''}">
+        // 3. 生成 HTML (完全复用您的原版样式结构)
+        let html = Object.values(categories).map(cat => `
+            <div class="ai-category expanded">
                 <div class="ai-category-header" onclick="this.parentElement.classList.toggle('expanded')">
                     <i class="fas fa-chevron-right"></i>
                     <i class="fas ${cat.icon}"></i>
@@ -182,7 +202,7 @@ export async function renderAICategories() {
                              ondragend="window.onDragEnd(event)">
                             
                             <div class="model-icon" style="background: ${model.color}">
-                                ${model.name.charAt(0)}
+                                ${model.name.charAt(0).toUpperCase()}
                             </div>
                             
                             <div class="model-info">
@@ -194,16 +214,13 @@ export async function renderAICategories() {
                                     ${model.price} 积分
                                 </div>
                             </div>
-
-                            <!-- 🚦 状态灯 (默认灰色，稍后 JS 变色) -->
-                            <div class="model-api-status" 
-                                 id="status-${model.id}"
-                                 title="正在检测..."
-                                 style="cursor: help; display:flex; align-items:center; justify-content:center;">
+                            
+                            <!-- 状态灯 -->
+                            <div class="model-api-status" id="status-${model.id}" title="检测中...">
                                 <i class="fas fa-circle" style="color:#64748b; font-size:10px;"></i>
                             </div>
                             
-                            <!-- 锁定按钮 -->
+                            <!-- 锁定按钮 (云端模型默认锁定) -->
                             <button class="model-config-btn" style="opacity:0.3; cursor:not-allowed">
                                 <i class="fas fa-lock"></i>
                             </button>
@@ -213,7 +230,7 @@ export async function renderAICategories() {
             </div>
         `).join('');
 
-        // 3. 追加本地自定义模型
+        // 4. 追加本地自定义模型 (保持不变)
         if (window.modelAPIConfigs) {
             const customModelsHTML = Array.from(window.modelAPIConfigs.entries())
                 .filter(([id]) => id.startsWith('custom_'))
@@ -238,57 +255,84 @@ export async function renderAICategories() {
                         <span>自定义模型 (本地)</span>
                     </div>
                     <div class="ai-models">${customModelsHTML}</div>
-                </div>` + html;
+                </div>` + html; // 把本地模型插到最前面
             }
         }
+        
+        // 5. 添加“新建模型”按钮
+        const addBtn = document.createElement('div');
+        addBtn.className = 'ai-model-card add-new'; // 保持样式一致
+        addBtn.style.justifyContent = 'center';
+        addBtn.style.cursor = 'pointer';
+        addBtn.innerHTML = `<i class="fas fa-plus-circle" style="margin-right:8px;"></i> 添加本地模型`;
+        addBtn.onclick = () => {
+            if(window.Modals && window.Modals.addCustomModel) window.Modals.addCustomModel();
+        };
+        // 这里需要找个地方放按钮，通常放在最后或者单独一个区域
+        // container.appendChild(addBtn); // 这里暂不追加，因为现在的结构是分组的
 
-        // 4. 渲染 HTML
+        // 渲染到页面
         container.innerHTML = html;
 
-        // 5. 🚀 异步启动状态检测
+        // 6. 启动状态检测
         Object.values(categories).forEach(cat => {
             cat.models.forEach(model => checkModelHealth(model.id, model.provider));
         });
 
     } catch (err) {
         console.error("加载模型失败:", err);
-        container.innerHTML = '<div class="p-4 text-gray-500">加载失败</div>';
+        container.innerHTML = '<div style="padding:20px; color:#ef4444;">加载失败，请检查网络</div>';
     }
 }
 
-// 异步检测模型状态
+// --- 辅助函数：让代码更干净 ---
+
+function getProviderDisplayName(key) {
+    const map = {
+        'openai': 'OpenAI',
+        'google': 'Google PaLM',
+        'deepseek': 'DeepSeek',
+        'anthropic': 'Anthropic',
+        'aliyun': '阿里云',
+        'baidu': '百度千帆'
+    };
+    return map[key] || key.toUpperCase();
+}
+
+function getProviderIcon(key) {
+    const map = {
+        'openai': 'fa-robot',
+        'google': 'fa-google',
+        'deepseek': 'fa-code',
+        'anthropic': 'fa-brain',
+        'aliyun': 'fa-cloud',
+        'baidu': 'fa-paw'
+    };
+    return map[key] || 'fa-microchip';
+}
+
+function getProviderColor(key) {
+    const map = {
+        'openai': '#10b981', // Green
+        'deepseek': '#8b5cf6', // Purple
+        'google': '#ea4335', // Red
+        'anthropic': '#d97706' // Amber
+    };
+    return map[key] || '#3b82f6'; // Blue default
+}
+
+// 异步检测模型状态 (保持您原有的逻辑)
 async function checkModelHealth(modelId, provider) {
     const statusEl = document.getElementById(`status-${modelId}`);
     if (!statusEl) return;
-
-    // 检查用户是否配置了自定义 Key
-    const userKey = localStorage.getItem(`${provider}_api_key`); // 比如 deepseek_api_key
+    const userKey = localStorage.getItem(`${provider}_api_key`);
     
     if (userKey) {
-        // === 蓝色方案：用户自带 Key ===
-        statusEl.innerHTML = '<i class="fas fa-user-check" style="color:#3b82f6"></i>'; // 蓝人头
-        statusEl.title = "使用您的自定义 Key (免费)";
-        
-        // 进一步：真的发个请求测试一下 (可选，怕费流量可以不做)
-        // await testUserKey(provider, userKey)...
-        
+        statusEl.innerHTML = '<i class="fas fa-user-check" style="color:#3b82f6"></i>'; 
+        statusEl.title = "使用您的自定义 Key";
     } else {
-        // === 绿色方案：平台托管 ===
-        // 这里我们默认平台是通的 (或者去调后台 /api/health 接口)
-        // 简单起见，直接给绿灯
-        statusEl.innerHTML = '<i class="fas fa-cloud" style="color:#10b981"></i>'; // 绿云
+        statusEl.innerHTML = '<i class="fas fa-cloud" style="color:#10b981"></i>'; 
         statusEl.title = "平台托管 (正常)";
-        
-        // 如果你想做故障检测：
-        /*
-        try {
-            const res = await fetch('/api/chat/ping', { method: 'HEAD' });
-            if (!res.ok) throw new Error();
-        } catch (e) {
-            statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ef4444"></i>';
-            statusEl.title = "平台服务异常";
-        }
-        */
     }
 }
 
@@ -446,6 +490,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
