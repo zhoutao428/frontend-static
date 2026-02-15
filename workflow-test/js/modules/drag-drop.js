@@ -1,7 +1,7 @@
 // js/modules/drag-drop.js
 import { log, getRoleName, getModelName } from './utils.js';
 import { renderGroups, updateBindingsUI, renderPartsGrid, updateApiStatus } from './ui.js';
-import { updateFurnaceDisplay, checkAlchemyReady } from './alchemy.js';
+import { updateFurnaceDisplay, checkAlchemyReady } from './alchemy_core.js';
 
 export function initDropZone() {
     // ----------------------------------------
@@ -185,3 +185,4 @@ export function bindModelToRole(roleId, modelId) {
     renderGroups();
     log(`绑定: ${roleId} → ${modelId}`);
 }
+
