@@ -56,5 +56,10 @@ if (window.startAIAlchemy) {
     // 防止 HTML 里没引用 role_generation.js
     console.error("❌ 找不到 window.startAIAlchemy 函数！请检查 HTML 是否引入了 role_generation.js");
 }
+} // 👈 别忘了这个 if 的结束括号
+} // 👈 别忘了这个函数的结束括号
+
+// ⚠️ 手动挂载
+window.checkAlchemyReady = checkAlchemyReady;
 
 
