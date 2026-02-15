@@ -5,7 +5,9 @@ import * as UI from './modules/ui.js';
 import * as Modals from './modules/modals.js';
 import * as Drag from './modules/drag-drop.js';
 import * as Trash from './modules/trash.js';
-import * as Alchemy from './modules/alchemy.js';
+import * as AlchemyCore from './modules/alchemy_core.js';
+import * as RoleGen from './modules/role_generation.js';
+import * as Workflow from './modules/workflow.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     Utils.log('🚀 系统启动 (模块化版)...');
@@ -26,9 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnMap = {
         'btn-reset': State.resetAll,
         'btn-export': State.exportConfig,
-        'btn-simulate': Alchemy.simulateInteraction,
-        'btn-run-all': Alchemy.executeWorkflow,
-        'btn-stop': Alchemy.stopExecution
+        'btn-simulate': RoleGen.simulateInteraction, // 假设模拟还在角色生成里，或者删掉
+        'btn-run-all': Workflow.executeWorkflow,     // ✅ 工作流的归 Workflow
+        'btn-stop': Workflow.stopExecution           // ✅ 停止也归 Workflow
     };
     Object.keys(btnMap).forEach(id => {
         const btn = document.getElementById(id);
@@ -77,13 +79,12 @@ window.onGroupDragOver = Drag.onGroupDragOver;
 window.onGroupDragLeave = Drag.onGroupDragLeave;
 window.onGroupDrop = Drag.onGroupDrop;
 
-// Alchemy
-window.executeWorkflow = Alchemy.executeWorkflow;
-window.stopExecution = Alchemy.stopExecution;
-window.toggleResultsPanel = Alchemy.toggleResultsPanel;
-window.simulateInteraction = Alchemy.simulateInteraction;
-window.autoOrchestrate = Alchemy.autoOrchestrate;
-window.runAgent = Alchemy.runAgent;
+// Workflow
+window.executeWorkflow = Workflow.executeWorkflow;
+window.stopExecution = Workflow.stopExecution;
+window.toggleResultsPanel = Workflow.toggleResultsPanel;
+window.autoOrchestrate = Workflow.autoOrchestrate;
+window.runAgent = Workflow.runAgent; // 如果 runAgent 还在 Workflow 里
 // State
 window.resetAll = State.resetAll;
 window.exportConfig = State.exportConfig;
@@ -92,4 +93,9 @@ window.exportConfig = State.exportConfig;
 window.clearDebugLog = Utils.clearDebugLog;
 window.toggleDebugPanel = Utils.toggleDebugPanel;
 window.togglePinDebugPanel = Utils.togglePinDebugPanel;
+
 window.showRoleDetails = Modals.showRoleDetails; // 补上这一行！
+// Role Generation
+window.simulateInteraction = RoleGen.simulateInteraction;
+// 如果还有 startAIAlchemy 需要手动调用：
+ window.startAIAlchemy = RoleGen.startAIAlchemy;
