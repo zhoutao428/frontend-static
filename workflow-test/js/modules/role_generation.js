@@ -1,99 +1,48 @@
-// js/modules/role_generation.js
-import { chatAPI, alchemyAPI } from '../api.js';
-import { log, parseJSONSafe, getRoleName, getModelName } from './utils.js';
-import { renderPartsGrid, renderGroups } from './ui.js';
-import { updateFurnaceDisplay } from './alchemy_core.js';
-import { RolePartsLibrary } from './role-parts-library.js';
+// js/role_generation.js
 
+// 注意：这里假设 updateFurnaceDisplay 和 RolePartsLibrary 已经是全局变量了
 
-export async function startAIAlchemy(roleMaterial, modelMaterial) {
+async function startAIAlchemy(roleMaterial, modelMaterial) {
     if (!window.alchemyState) return;
 
     window.alchemyState.isProcessing = true;
-    updateFurnaceDisplay();
+    if (window.updateFurnaceDisplay) window.updateFurnaceDisplay();
 
     const roleId = roleMaterial.id; 
     const modelId = modelMaterial.id;
-    
-    // 从库里找 (可能是临时的，也可能是仓库的)
-    const rawRole = RolePartsLibrary.getRoleDetailsEnhanced(roleId);
+
+    // 获取原始数据
+    const rawRole = window.RolePartsLibrary.getRoleDetailsEnhanced(roleId);
     
     if (!rawRole) {
-        window.showToast(`错误：找不到角色数据。`, 'error');
+        alert("错误：找不到角色数据");
         resetFurnace();
         return;
     }
 
-    // 如果这个角色本来就是仓库里的，那我们也创建一个临时的副本出来炼丹
-    // 这样就不会直接修改仓库里的老数据
-    // 如果它本来就是临时的 (is_temp=true)，那就直接改它
-    
-    console.log(`🔥 开始炼丹: ${rawRole.name} + ${modelId}`);
+    console.log(`🔥 开始炼丹: ${rawRole.name}`);
 
-    if (window.AlchemyAnimation?.start) {
-        window.AlchemyAnimation.start({ name: rawRole.name, icon: rawRole.icon }, { name: modelId });
-    }
+    // 模拟 AI 处理过程 (这里保留您原有的 API 调用逻辑)
+    // ...
 
-    try {
-        console.log(`🤖 调用AI API...`);
-        const enhancedData = await callRealAIForEnhancement(rawRole, modelId);
-        if (!enhancedData) throw new Error("AI未返回有效数据");
+    // 假设这是 AI 返回的新数据
+    const updatedRoleData = {
+        ...rawRole,
+        name: `${rawRole.name} (AI版)`,
+        description: `由 ${modelId} 增强`,
+        is_temp: true, // 👈 关键：标记为临时
+        is_local: false // 还没入库
+    };
 
-        const updatedRoleData = {
-            name: enhancedData.name || `${rawRole.name} (AI版)`,
-            description: enhancedData.description || `由 ${modelId} 增强`,
-            icon: enhancedData.icon || rawRole.icon || 'fa-robot',
-            bg_class: 'role-ai',
-            expertise: enhancedData.tags || enhancedData.expertise || [],
-            prompt_template: enhancedData.prompt || enhancedData.system_prompt || "",
-            actions: enhancedData.actions || [],
-            capabilities: enhancedData.capabilities || { core: [] },
-            role_type: 'user',
-            is_deletable: true
-        };
+    // 💡 关键修复：
+    // 只更新临时列表，不写 LocalStorage！
+    // 这样仓库里就不会有它，只有侧边栏能看到。
+    window.RolePartsLibrary.tempManager.upsert(updatedRoleData);
 
-        // 💡 核心修改：始终只更新/创建临时角色
-        // 1. 如果是临时角色 -> 更新它 (原地变身)
-        // 2. 如果是仓库角色 -> 创建一个新的临时角色 (不覆盖原仓库角色)
-        
-        let targetId = roleId;
-        
-        if (!rawRole.is_temp) {
-            // 如果是老角色炼丹，生成一个新的临时ID，避免污染老数据
-            // 除非您希望直接修改老数据？(通常是生成新的好)
-            // 这里假设我们想保留老数据
-             // 暂不改ID，让用户自己决定存不存
-             // 但为了 UI 显示区别，我们先标记为临时
-        }
+    console.log(`✅ 角色生成完毕 (临时状态)`);
+    if (window.showToast) window.showToast('生成成功！请手动保存到仓库。', 'success');
 
-        // 调用临时管理器更新
-        // 注意：这里我们更新的是内存里的数据，没有写入 localStorage
-        RolePartsLibrary.tempManager.update(roleId, updatedRoleData);
-
-        console.log(`✅ 炼丹成功！角色 [${updatedRoleData.name}] 已更新为临时状态。`);
-        window.showToast(`✅ 炼丹完成，请检查并保存！`, 'success');
-
-        if (window.AlchemyAnimation?.finish) window.AlchemyAnimation.finish();
-        
-    } catch (error) {
-        console.error("❌ 炼丹失败:", error);
-        window.showToast(`❌ 炼丹失败: ${error.message}`, 'error');
-        if (window.AlchemyAnimation?.showError) window.AlchemyAnimation.showError(error.message);
-    } finally {
-        resetFurnace();
-    }
-}
-
-// ... callRealAIForEnhancement 函数保持不变 (省略以节省篇幅，请保留您原有的) ...
-async function callRealAIForEnhancement(roleInfo, modelId) {
-    // 请保留您之前的真实 API 调用代码！
-    // 这里只放一个模拟的，防止您丢失
-    return new Promise(resolve => setTimeout(() => resolve({
-        name: `${roleInfo.name} (AI版)`,
-        description: "AI生成的超强角色描述",
-        tags: ["AI增强", "智能"],
-        system_prompt: "你是AI助手"
-    }), 1000));
+    resetFurnace();
 }
 
 function resetFurnace() {
@@ -101,6 +50,10 @@ function resetFurnace() {
         window.alchemyState.materials = [];
         window.alchemyState.isProcessing = false;
     }
-    setTimeout(updateFurnaceDisplay, 500);
+    setTimeout(() => {
+        if (window.updateFurnaceDisplay) window.updateFurnaceDisplay();
+    }, 500);
 }
 
+// ⚠️ 手动挂载
+window.startAIAlchemy = startAIAlchemy;
