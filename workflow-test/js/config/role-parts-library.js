@@ -1,62 +1,30 @@
-// role-parts-library.js
-// 角色部件库管理
+// js/config/role-parts-library.js
 
+// 定义角色库对象
 const RolePartsLibrary = {
-    // 系统预设角色
-    systemParts: [
-        {
-            id: 'director',
-            name: '导演',
-            description: '负责统筹拍摄现场，指导演员表演，把控整体创作方向',
-            icon: 'fa-clapperboard',
-            bg_class: 'role-system',
-            expertise: ['场面调度', '剧本分析', '演员指导', '镜头语言', '团队管理'],
-            prompt_template: '你是一位经验丰富的电影导演，擅长...',
-            actions: ['🎬 执导', '📝 修改剧本', '🎭 指导表演'],
-            capabilities: { core: ['导演能力1', '导演能力2'] },
-            role_type: 'system',
-            is_deletable: false
+    // 预设系统零件 (可按需添加)
+    parts: {
+        'frontend_expert': {
+            id: 'frontend_expert',
+            name: '前端专家',
+            category: 'tech',
+            icon: 'fa-code',
+            color: '#3b82f6',
+            tags: ['React', 'Vue', 'CSS'],
+            description: '精通前端技术栈',
+            apiTemplate: { systemPrompt: '你是一个资深前端专家。', temperature: 0.7 }
         },
-        {
-            id: 'writer',
-            name: '编剧',
-            description: '擅长故事创作、剧本撰写和情节设计',
-            icon: 'fa-feather',
-            bg_class: 'role-system',
-            expertise: ['故事架构', '对话撰写', '情节设计', '人物塑造', '节奏把控'],
-            prompt_template: '你是一位富有创意的编剧，擅长...',
-            actions: ['✍️ 创作', '📖 写对白', '🔄 修改情节'],
-            capabilities: { core: ['编剧能力1', '编剧能力2'] },
-            role_type: 'system',
-            is_deletable: false
-        },
-        {
-            id: 'actor',
-            name: '演员',
-            description: '专业表演者，能够诠释各种角色和情感',
-            icon: 'fa-mask',
-            bg_class: 'role-system',
-            expertise: ['情感表达', '肢体语言', '台词功底', '角色分析', '即兴表演'],
-            prompt_template: '你是一位专业的演员，能够...',
-            actions: ['🎭 表演', '🎪 即兴', '📋 分析角色'],
-            capabilities: { core: ['演员能力1', '演员能力2'] },
-            role_type: 'system',
-            is_deletable: false
-        },
-        {
-            id: 'critic',
-            name: '影评人',
-            description: '深入分析电影作品，提供专业见解和评价',
-            icon: 'fa-star',
-            bg_class: 'role-system',
-            expertise: ['电影分析', '文化解读', '技术评估', '历史对比', '趋势预测'],
-            prompt_template: '你是一位专业的影评人，擅长...',
-            actions: ['⭐ 点评', '📊 分析', '🔍 深度解读'],
-            capabilities: { core: ['影评人能力1', '影评人能力2'] },
-            role_type: 'system',
-            is_deletable: false
+        'product_manager': {
+            id: 'product_manager',
+            name: '产品经理',
+            category: 'product',
+            icon: 'fa-tasks',
+            color: '#a855f7',
+            tags: ['需求分析', '原型设计'],
+            description: '负责产品规划与设计',
+            apiTemplate: { systemPrompt: '你是一个资深产品经理。', temperature: 0.7 }
         }
-    ],
+    },
 
      userParts: {
         _parts: {}, // 内部存储
@@ -265,4 +233,5 @@ if (window.RolePartsLibrary) {
         if (window.renderPartsGrid) window.renderPartsGrid(); 
     };
 }
+
 
