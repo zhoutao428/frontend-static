@@ -4,8 +4,7 @@ import { log, parseJSONSafe, getRoleName, getModelName } from './utils.js';
 import { renderPartsGrid, renderGroups } from './ui.js';
 import { updateFurnaceDisplay } from './alchemy_core.js';
 import { RolePartsLibrary } from './role-parts-library.js';
-/**
- * 更新炼丹炉的界面显示
+
 
 export async function startAIAlchemy(roleMaterial, modelMaterial) {
     if (!window.alchemyState) return;
@@ -104,3 +103,4 @@ function resetFurnace() {
     }
     setTimeout(updateFurnaceDisplay, 500);
 }
+
