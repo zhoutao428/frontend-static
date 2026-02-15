@@ -137,7 +137,7 @@ window.deleteLocalRole = function(roleId, event) {
 
 export async function renderAICategories() {
     // 1. 获取容器 (修正为 model-list 以匹配您的 HTML)
-    const container = document.getElementById('model-list');
+    const container = document.getElementById('ai-categories');
     if (!container) return;
     
     // 显示加载状态
@@ -370,6 +370,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
