@@ -311,4 +311,39 @@ export function updateApiStatus() {
         }
     });
 }
+// -----------------------------------------------------------------------------
+// 💡 修复：补上 updateBindingsUI 函数
+// -----------------------------------------------------------------------------
+export function updateBindingsUI() {
+    const cards = document.querySelectorAll('.part-card');
+    cards.forEach(card => {
+        const roleId = card.dataset.id;
+        const bindingIndicator = card.querySelector('.binding-tag');
+        
+        if (window.bindings && window.bindings.has(roleId)) {
+            const modelId = window.bindings.get(roleId);
+            // 简单获取模型名称，如果没有 helper 函数则显示 ID
+            const modelName = (window.getModelName && window.getModelName(modelId)) || modelId;
+            
+            if (bindingIndicator) {
+                bindingIndicator.innerHTML = `<i class="fas fa-link"></i> ${modelName}`;
+                bindingIndicator.style.display = 'inline-block';
+            } else {
+                // 如果标签区域存在，添加一个新的绑定标签
+                const tagsDiv = card.querySelector('.part-tags');
+                if (tagsDiv) {
+                    const newTag = document.createElement('span');
+                    newTag.className = 'tag binding-tag';
+                    newTag.style.border = '1px solid #10b981';
+                    newTag.style.color = '#10b981';
+                    newTag.innerHTML = `<i class="fas fa-link"></i> ${modelName}`;
+                    tagsDiv.appendChild(newTag);
+                }
+            }
+        } else {
+            // 没有绑定，移除指示器
+            if (bindingIndicator) bindingIndicator.remove();
+        }
+    });
+}
 
