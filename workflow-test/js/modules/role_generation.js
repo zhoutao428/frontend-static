@@ -2,7 +2,7 @@
 import { updateFurnaceDisplay } from './alchemy_core.js';
 // 注意：这里假设 updateFurnaceDisplay 和 RolePartsLibrary 已经是全局变量了
 
-export async function startAIAlchemy(roleItem, modelItem) {
+export async function startAIAlchemy(roleMaterial, modelMaterial) {
     if (!window.alchemyState) return;
 
     window.alchemyState.isProcessing = true;
@@ -57,4 +57,5 @@ export function simulateInteraction() {
 
 // ⚠️ 手动挂载
 window.startAIAlchemy = startAIAlchemy;
+
 
