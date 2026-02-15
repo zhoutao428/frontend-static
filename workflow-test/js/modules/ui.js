@@ -138,62 +138,86 @@ window.deleteLocalRole = function(roleId, event) {
 // 渲染右侧 AI 引擎库 (含状态检测)
 // ui.js - renderAICategories (完美适配版)
 
+// ui.js - 替换 renderAICategories 函数
+
 export async function renderAICategories() {
     const container = document.getElementById('ai-categories');
-    if(!container) return;
+    if (!container) return;
+
+    console.log("🚀 开始渲染右侧模型列表..."); // 调试日志
 
     try {
-        // 1. 获取数据 (使用正确的表名 ai_models)
+        // 1. 取数据
         const { data: models, error } = await window.supabase
             .from('ai_models')
             .select('*')
-            .order('sort_order', { ascending: true }); // 按您的 sort_order 排序
+            .order('provider');
 
         if (error || !models) {
-            console.error("加载模型失败:", error);
+            console.error("数据获取失败:", error);
             container.innerHTML = '<div style="padding:10px;">加载失败</div>';
             return;
         }
 
-        // 2. 渲染 HTML (字段名已完全匹配)
-        container.innerHTML = models.map(model => {
-            // 🎨 图标匹配逻辑
-            let iconClass = 'fa-robot'; // 默认图标
-            let iconColor = '#3b82f6';  // 默认蓝色
-            
-            if (model.provider === 'openai') { iconClass = 'fa-bolt'; iconColor = '#10b981'; }
-            if (model.provider === 'google') { iconClass = 'fa-google'; iconColor = '#ea4335'; }
-            if (model.provider === 'deepseek') { iconClass = 'fa-code'; iconColor = '#8b5cf6'; }
-            if (model.provider === 'anthropic') { iconClass = 'fa-brain'; iconColor = '#d97706'; }
+        console.log(`✅ 获取到 ${models.length} 个模型，开始分组...`);
 
-            // 🏷️ ID 使用 model_code，这才是真正调用时需要的 ID
-            const modelId = model.model_code;
+        // 2. 自动分组 (为了适配您的 CSS 分类样式)
+        const groups = {};
+        models.forEach(m => {
+            const p = m.provider || '其他';
+            if (!groups[p]) groups[p] = [];
+            groups[p].push(m);
+        });
 
-            return `
-            <div class="role-card model-card" 
-                 draggable="true" 
-                 data-id="${modelId}" 
-                 data-type="model"
-                 data-provider="${model.provider}"
-                 ondragstart="window.onRoleDragStart(event)">
-                
-                <div class="role-icon" style="background: ${iconColor}">
-                    <i class="fas ${iconClass}"></i>
+        // 3. 渲染分组 HTML (硬编码样式是为了临时显示，等您改了数据库这里就可以删了)
+        let html = '';
+        for (const [provider, items] of Object.entries(groups)) {
+            // 临时样式字典
+            const styleMap = {
+                'google': { icon: 'fa-google', color: '#ea4335', name: 'Google' },
+                'openai': { icon: 'fa-bolt', color: '#10b981', name: 'OpenAI' },
+                'deepseek': { icon: 'fa-code', color: '#8b5cf6', name: 'DeepSeek' },
+                'anthropic': { icon: 'fa-brain', color: '#d97706', name: 'Anthropic' }
+            };
+            const style = styleMap[provider] || { icon: 'fa-robot', color: '#64748b', name: provider.toUpperCase() };
+
+            // 生成 HTML
+            html += `
+            <div class="ai-category expanded">
+                <div class="ai-category-header" onclick="this.parentElement.classList.toggle('expanded')">
+                    <i class="fas fa-chevron-right"></i>
+                    <i class="fas ${style.icon}" style="color: ${style.color}"></i>
+                    <span>${style.name}</span>
                 </div>
-                
-                <div class="role-info">
-                    <div class="role-name">${model.display_name}</div>
-                    <div class="role-desc">
-                        ${model.provider} · ${model.sale_price || 0} 积分
-                    </div>
+                <div class="ai-models">
+                    ${items.map(m => `
+                        <div class="ai-model-card" 
+                             draggable="true"
+                             data-id="${m.model_code}"    
+                             data-provider="${m.provider}"
+                             ondragstart="window.onRoleDragStart(event)"> <!-- 复用拖拽逻辑 -->
+                            
+                            <div class="model-icon" style="background: ${style.color}">
+                                ${m.display_name.charAt(0)}
+                            </div>
+                            <div class="model-info">
+                                <div class="model-name">${m.display_name}</div>
+                                <div class="model-provider">${m.sale_price} 积分</div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
-                
-                <div class="role-actions">
-                    <i class="fas fa-circle" style="color:#10b981; font-size:10px;" title="正常"></i>
-                </div>
-            </div>
-            `;
-        }).join('');
+            </div>`;
+        }
+
+        container.innerHTML = html;
+        console.log("✅ 渲染完成！");
+
+    } catch (e) {
+        console.error("渲染出错:", e);
+    }
+}
+
         
         // 3. 重新初始化拖拽
         if (window.DragDrop && window.DragDrop.initializeDragAndDrop) {
@@ -460,6 +484,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
