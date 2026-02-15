@@ -133,13 +133,6 @@ window.deleteLocalRole = function(roleId, event) {
         }
     }
 };
-
-
-// 渲染右侧 AI 引擎库 (含状态检测)
-// ui.js - renderAICategories (完美适配版)
-
-// ui.js - 替换 renderAICategories 函数
-
 export async function renderAICategories() {
     const container = document.getElementById('ai-categories');
     if (!container) return;
@@ -255,9 +248,6 @@ export async function renderAICategories() {
         };
         // 这里需要找个地方放按钮，通常放在最后或者单独一个区域
         // container.appendChild(addBtn); // 这里暂不追加，因为现在的结构是分组的
-
-        // 渲染到页面
-        container.innerHTML = html;
 
         // 6. 启动状态检测
         Object.values(categories).forEach(cat => {
@@ -475,6 +465,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
