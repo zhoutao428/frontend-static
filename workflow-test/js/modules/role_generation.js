@@ -1,8 +1,8 @@
 // js/role_generation.js
-
+import { updateFurnaceDisplay } from './alchemy_core.js';
 // 注意：这里假设 updateFurnaceDisplay 和 RolePartsLibrary 已经是全局变量了
 
-async function startAIAlchemy(roleMaterial, modelMaterial) {
+export async function startAIAlchemy(roleItem, modelItem) {
     if (!window.alchemyState) return;
 
     window.alchemyState.isProcessing = true;
@@ -45,7 +45,7 @@ async function startAIAlchemy(roleMaterial, modelMaterial) {
     resetFurnace();
 }
 
-function resetFurnace() {
+export function simulateInteraction() {
     if (window.alchemyState) {
         window.alchemyState.materials = [];
         window.alchemyState.isProcessing = false;
@@ -57,3 +57,4 @@ function resetFurnace() {
 
 // ⚠️ 手动挂载
 window.startAIAlchemy = startAIAlchemy;
+
