@@ -1,15 +1,126 @@
-// js/modules/modals.js
+// 文件名: js/modules/modals.js
+
 import { getRoleName, getModelName } from './utils.js';
 import { saveAllAPIConfigs } from './state.js';
 import { renderPartsGrid, renderAICategories } from './ui.js';
 import { log } from './utils.js';
+import { RolePartsLibrary } from './role-parts-library.js'; // 导入 RolePartsLibrary 以便 showRoleDetails 使用
+
+// -----------------------------------------------------------------------------
+// 1. 新增：通用的弹窗管理函数 (为了修复 main.js 报错)
+// -----------------------------------------------------------------------------
+
+/**
+ * 初始化所有弹窗的通用事件监听
+ * (main.js 会调用此函数)
+ */
+export function initializeModalToggles() {
+    console.log("🔧 初始化弹窗系统...");
+
+    // 绑定所有 .modal-close 按钮的点击事件
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('.modal-close') || event.target.classList.contains('modal-close')) {
+            const modal = event.target.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        // 点击弹窗背景遮罩层关闭
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
+    });
+
+    // 绑定 ESC 键关闭所有弹窗
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+    });
+}
+
+export function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+        const input = modal.querySelector('input, textarea');
+        if (input) setTimeout(() => input.focus(), 50);
+    }
+}
+
+export function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+export function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('collapsed');
+        window.dispatchEvent(new Event('resize'));
+    }
+}
+
+/**
+ * 创建并打开自定义角色的对话窗口
+ */
+export function createCustomRoleWindow(roleId) {
+    const roleName = (window.getRoleName && window.getRoleName(roleId)) || roleId;
+    let panelId = `${roleId}-panel`;
+    let panel = document.getElementById(panelId);
+    
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = panelId;
+        panel.className = 'modal custom-role-window';
+        panel.style.display = 'none';
+        
+        panel.innerHTML = `
+            <div class="modal-content" style="max-width: 600px; padding: 20px;">
+                <span class="modal-close" onclick="Modals.closeModal('${panelId}')" style="float: right; cursor: pointer; font-size: 24px;">&times;</span>
+                <h3>💬 ${roleName}</h3>
+                <div class="chat-container" id="${roleId}-chat" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; background: #f9f9f9;">
+                    <div class="system-message" style="color: #888; text-align: center; font-size: 12px;">角色已就绪。你可以开始对话，或输入指令。</div>
+                </div>
+                <div class="input-area" style="display: flex; gap: 10px;">
+                    <textarea placeholder="输入指令或对话内容... (Ctrl+Enter 发送)" style="flex: 1; height: 60px; padding: 5px;"></textarea>
+                    <button onclick="window.sendRoleMessage && window.sendRoleMessage('${roleId}')" style="padding: 0 20px;">发送</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(panel);
+        
+        const textarea = panel.querySelector('textarea');
+        const sendBtn = panel.querySelector('button');
+        if (textarea && sendBtn) {
+            textarea.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    sendBtn.click();
+                }
+            });
+        }
+    }
+    openModal(panelId);
+}
+
+
+// -----------------------------------------------------------------------------
+// 2. 保留：您原有的 API 配置和业务逻辑
+// -----------------------------------------------------------------------------
 
 function resetModalUI(mode) {
     const titleEl = document.querySelector('#api-config-modal .modal-header h3');
     const labelEl = document.querySelector('label[for="config-role-name"]');
     const nameInput = document.getElementById('config-role-name');
     const keyInput = document.getElementById('api-key');
-    document.getElementById('api-config-form').reset();
+
+    const form = document.getElementById('api-config-form');
+    if(form) form.reset();
 
     if (mode === 'role') {
         if(titleEl) titleEl.innerHTML = `<i class="fas fa-user-cog"></i> 角色API配置`;
@@ -27,49 +138,77 @@ function resetModalUI(mode) {
 }
 
 function fillModalForm(config, defaults) {
-    document.getElementById('api-type').value = config.type || defaults.type || 'openai';
-    document.getElementById('api-endpoint').value = config.endpoint || defaults.endpoint || '';
-    document.getElementById('api-key').value = config.apiKey || defaults.key || '';
-    document.getElementById('api-model').value = config.model || defaults.model || '';
-    document.getElementById('api-temperature').value = config.temperature || defaults.temp || 0.7;
-    document.getElementById('api-system-prompt').value = config.systemPrompt || defaults.prompt || '';
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if(el) el.value = val !== undefined ? val : '';
+    };
+
+    setVal('api-type', config.type || defaults.type || 'openai');
+    setVal('api-endpoint', config.endpoint || defaults.endpoint || '');
+    setVal('api-key', config.apiKey || defaults.key || '');
+    setVal('api-model', config.model || defaults.model || '');
+    setVal('api-temperature', config.temperature || defaults.temp || 0.7);
+    setVal('api-system-prompt', config.systemPrompt || defaults.prompt || '');
+
     const tempVal = document.getElementById('temp-value');
-    if(tempVal) tempVal.textContent = document.getElementById('api-temperature').value;
+    if(tempVal) tempVal.textContent = document.getElementById('api-temperature')?.value;
 }
 
 export function showApiConfig(roleId, event) {
     if (event) event.stopPropagation();
     resetModalUI('role');
+
     const roleName = getRoleName(roleId);
-    document.getElementById('config-role-name').value = roleName;
-    document.getElementById('config-role-id').value = roleId;
-    const config = window.apiConfigs.get(roleId) || {};
+    const nameInput = document.getElementById('config-role-name');
+    const idInput = document.getElementById('config-role-id');
+    
+    if(nameInput) nameInput.value = roleName;
+    if(idInput) idInput.value = roleId;
+
+    const config = (window.apiConfigs && window.apiConfigs.get(roleId)) || {};
     fillModalForm(config, { type: 'openai', endpoint: '', key: '', model: '', temp: 0.7, prompt: '' });
-    document.getElementById('api-config-modal').style.display = 'flex';
+
+    const modal = document.getElementById('api-config-modal');
+    if(modal) modal.style.display = 'flex';
 }
 
 export function addCustomModel() {
     resetModalUI('new_model');
-    document.getElementById('config-role-id').value = 'NEW_CUSTOM_MODEL';
-    document.getElementById('config-role-name').value = '';
+    
+    const idInput = document.getElementById('config-role-id');
+    const nameInput = document.getElementById('config-role-name');
+    
+    if(idInput) idInput.value = 'NEW_CUSTOM_MODEL';
+    if(nameInput) nameInput.value = '';
+
     fillModalForm({}, { type: 'custom', endpoint: 'http://localhost:11434/api/chat', key: '', model: 'deepseek-coder:1.3b', temp: 0.7, prompt: '' });
-    document.getElementById('api-config-modal').style.display = 'flex';
+
+    const modal = document.getElementById('api-config-modal');
+    if(modal) modal.style.display = 'flex';
 }
 
 export function showModelAPIConfig(modelId, event) {
     if (event) event.stopPropagation();
     resetModalUI('edit_model');
+
     const modelName = getModelName(modelId);
-    document.getElementById('config-role-name').value = modelName;
-    document.getElementById('config-role-id').value = modelId;
+    const nameInput = document.getElementById('config-role-name');
+    const idInput = document.getElementById('config-role-id');
+    
+    if(nameInput) nameInput.value = modelName;
+    if(idInput) idInput.value = modelId;
+
     const config = (window.modelAPIConfigs && window.modelAPIConfigs.get(modelId)) || {};
     fillModalForm(config, {});
-    document.getElementById('api-config-modal').style.display = 'flex';
+
+    const modal = document.getElementById('api-config-modal');
+    if(modal) modal.style.display = 'flex';
 }
 
 export async function saveApiConfig() {
     const configId = document.getElementById('config-role-id').value;
     const isNewModel = configId === 'NEW_CUSTOM_MODEL';
+
     const config = {
         type: document.getElementById('api-type').value,
         endpoint: document.getElementById('api-endpoint').value,
@@ -80,7 +219,9 @@ export async function saveApiConfig() {
         displayName: document.getElementById('config-role-name').value || '未命名模型',
         lastUpdated: new Date().toISOString()
     };
+
     const isLocal = config.type === 'custom' || config.endpoint.includes('localhost');
+
     if (!config.apiKey && !isLocal) return alert('请输入 API 密钥');
     if (!config.apiKey && isLocal) config.apiKey = 'sk-local';
 
@@ -88,22 +229,33 @@ export async function saveApiConfig() {
         const newId = `custom_${Date.now()}`;
         if (!window.modelAPIConfigs) window.modelAPIConfigs = new Map();
         window.modelAPIConfigs.set(newId, config);
-        // appendCustomModelToUI 在 UI 模块里，这里可以直接调 renderAICategories
+        
         renderAICategories();
         log(`✨ 已添加模型: ${config.displayName}`);
     } else {
         const isModelID = configId.startsWith('custom_') || configId.startsWith('deepseek') || configId.startsWith('gpt') || configId.startsWith('openai');
-        if (isModelID) { window.modelAPIConfigs.set(configId, config); renderAICategories(); }
-        else { window.apiConfigs.set(configId, config); renderPartsGrid(); }
+
+        if (isModelID) { 
+            if (!window.modelAPIConfigs) window.modelAPIConfigs = new Map();
+            window.modelAPIConfigs.set(configId, config); 
+            renderAICategories(); 
+        } else { 
+            if (!window.apiConfigs) window.apiConfigs = new Map();
+            window.apiConfigs.set(configId, config); 
+            renderPartsGrid(); 
+        }
         log(`✅ 配置已更新`);
     }
+
     saveAllAPIConfigs();
     hideApiConfigModal();
 }
 
-export function hideApiConfigModal() { document.getElementById('api-config-modal').style.display = 'none'; }
+export function hideApiConfigModal() { 
+    const modal = document.getElementById('api-config-modal');
+    if(modal) modal.style.display = 'none'; 
+}
 
-// 测试连接 (优化版)
 export async function testApiConnection() {
     const endpoint = document.getElementById('api-endpoint').value;
     const key = document.getElementById('api-key').value;
@@ -111,29 +263,22 @@ export async function testApiConnection() {
     
     if (!endpoint) return alert("请先填写 API 端点");
     
-    // 按钮 loading 状态
     const btn = document.querySelector('#api-config-modal .modal-footer .btn-secondary:first-child');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 测试中...';
-    btn.disabled = true;
+    let originalText = "测试连接";
+    if(btn) {
+        originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 测试中...';
+        btn.disabled = true;
+    }
 
     try {
-        // 智能判断请求格式 (Ollama 原生 vs OpenAI)
         const isOllamaNative = endpoint.includes('/api/chat');
         let body = {};
         
         if (isOllamaNative) {
-            body = {
-                model: model,
-                messages: [{ role: 'user', content: 'Hi' }],
-                stream: false
-            };
+            body = { model: model, messages: [{ role: 'user', content: 'Hi' }], stream: false };
         } else {
-            body = {
-                model: model,
-                messages: [{ role: 'user', content: 'Hi' }],
-                max_tokens: 5
-            };
+            body = { model: model, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 5 };
         }
 
         const response = await fetch(endpoint, {
@@ -147,7 +292,6 @@ export async function testApiConnection() {
 
         if (response.ok) {
             const data = await response.json();
-            // 尝试提取回复内容，证明真的通了
             let reply = "";
             if (data.message) reply = data.message.content; // Ollama
             else if (data.choices) reply = data.choices[0].message.content; // OpenAI
@@ -155,19 +299,19 @@ export async function testApiConnection() {
             alert(`✅ 连接成功！\n\nAPI 响应正常。\n模型回复: "${reply.substring(0, 50)}..."`);
         } else {
             const errText = await response.text();
-            // 优化错误显示，防止太长
             alert(`❌ 连接失败 (${response.status})\n\n错误信息:\n${errText.substring(0, 200)}...`);
         }
     } catch (e) {
         alert(`❌ 网络错误:\n${e.message}\n\n可能原因：\n1. 地址填错了\n2. 本地服务没开\n3. 跨域(CORS)被拦截`);
     } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if(btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 }
 
 export function showRoleDetails(roleId) {
-    // 1. 获取完整数据
     let roleData = RolePartsLibrary.getRoleDetailsEnhanced(roleId);
     if (!roleData && roleId.startsWith('user_')) {
         roleData = RolePartsLibrary.userParts.find(roleId);
@@ -175,7 +319,6 @@ export function showRoleDetails(roleId) {
     
     if (!roleData) return alert("未找到角色数据");
 
-    // 2. 组装详情文本
     const info = [
         `【${roleData.name}】`,
         `----------------`,
@@ -192,36 +335,25 @@ export function showRoleDetails(roleId) {
         roleData.apiTemplate?.systemPrompt || '未生成'
     ].join('\n');
 
-    // 3. 弹窗显示 (后续可以改成漂亮的 Modal)
     alert(info);
-    
-    // 如果你想看 JSON 结构，方便调试：
     console.log("角色完整数据:", roleData);
 }
 
 export function checkModelAPIConfig(modelId) {
-    // 1. 如果是云端模型 (GPT/DeepSeek/Claude)，直接算作已配置 (绿灯)
-    // 因为它们走 Next.js 后台，平台有 Key
     if (modelId.startsWith('gpt') || modelId.startsWith('deepseek') || modelId.startsWith('claude') || modelId === 'openai') {
         return true; 
     }
-
-    // 2. 如果是自定义模型 (custom_xxx)，必须检查是否有配置
     if (window.modelAPIConfigs && window.modelAPIConfigs.has(modelId)) {
         return true;
     }
-    
-    // 3. 兼容旧逻辑 (可选)
     if (modelId.includes('deepseek')) return !!localStorage.getItem('deepseek_api_key');
     if (modelId.includes('gpt')) return !!localStorage.getItem('openai_api_key');
     
     return false;
 }
+
 export function showTaskDetails(roleId, taskDesc) {
-    // 先显示角色信息
     showRoleDetails(roleId);
-    
-    // 如果有任务，额外弹窗或者在 console 显示
     if (taskDesc && taskDesc !== 'undefined') {
         setTimeout(() => {
             alert(`【当前任务指令】\n\n${taskDesc}`);
