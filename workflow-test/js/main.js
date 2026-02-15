@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     Modals.initializeModalToggles();
     UI.initToolbar();
     initTrashCan();
-    
+    UI.renderAICategories();
     if (window.supabase) {
         await RolePartsLibrary.init(window.supabase);
     } else {
@@ -114,3 +114,4 @@ window.quickAction = async function(roleId, promptTemplate) {
         alert(`技能: ${promptTemplate}`);
     }
 };
+
