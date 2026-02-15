@@ -57,7 +57,7 @@ export function initToolbar() {
 // -----------------------------------------------------------------------------
 
 export function renderPartsGrid() {
-    const container = document.getElementById('parts-grid');
+    const container = document.getElementById('role-container'); // ✅ 您的 HTML 里叫 role-container
     if (!container) return;
     container.innerHTML = '';
 
@@ -77,62 +77,70 @@ export function renderPartsGrid() {
     }
 }
 
-export function createRoleCard(part) {
-    const card = document.createElement('div');
-    card.className = `part-card ${part.category || 'custom'}`;
-    if (part.bg_class) card.classList.add(part.bg_class);
+export function renderPartsGrid() {
+    const grid = document.getElementById('parts-grid');
+    if(!grid) return;
+
+    const allParts = window.RolePartsLibrary.getAllPartsEnhanced 
+        ? window.RolePartsLibrary.getAllPartsEnhanced() 
+        : window.RolePartsLibrary.getAllParts();
     
-    card.draggable = true;
-    card.dataset.id = part.id;
-    card.dataset.type = 'role'; // 明确标记为角色
-    
-    // 确保把完整数据绑定到 DOM 元素上，供拖拽时使用
-    card.data = part; 
+    // 辅助：转义引号
+    const escapeHtml = (text) => text.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
 
-    // 构建标签HTML
-    const tagsHtml = (part.tags || part.expertise || []).slice(0, 3)
-        .map(tag => `<span class="tag">${tag}</span>`).join('');
+    grid.innerHTML = allParts.map(part => {
+        const hasApi = window.apiConfigs.has(part.id);
+        
+        // ✨ 新增：生成技能按钮 HTML
+        const actions = part.actions || [];
+        const skillsHtml = actions.length > 0 
+            ? `<div class="part-skills" style="display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 5px 0;">
+                 ${actions.map(act => `
+                    <button class="btn-mini-skill" 
+                            style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:#cbd5e1; padding:2px 8px; border-radius:4px; font-size:10px; cursor:pointer;"
+                            onclick="event.stopPropagation(); window.quickAction('${part.id}', '${escapeHtml(act.prompt)}')">
+                        <i class="fas fa-bolt" style="color:#fbbf24; margin-right:4px;"></i>${act.label}
+                    </button>
+                 `).join('')}
+               </div>`
+            : '';
 
-    // 如果是自定义角色，添加删除按钮
-    let deleteBtnHtml = '';
-    if (part.is_local && part.is_deletable) {
-        deleteBtnHtml = `<button class="delete-role-btn" onclick="window.deleteLocalRole('${part.id}', event)" title="删除此角色">×</button>`;
-    }
+        return `
+        <div class="part-card" 
+             onclick="window.showRoleDetails('${part.id}')"
+             draggable="true" 
+             data-role-id="${part.id}"
+             ondragstart="window.onRoleDragStart(event)"
+             ondragend="window.onDragEnd(event)">
+            <div class="part-header">
+                <div class="part-icon" style="background: ${part.color || '#3b82f6'}">
+                    <i class="${part.icon || 'fa-user'}"></i>
+                </div>
+                <div class="part-name">${part.name}</div>
+                <div class="api-status ${hasApi ? 'has-api' : 'no-api'}" 
+                     onclick="window.showApiConfig('${part.id}', event)"
+                     title="${hasApi ? '已配置API' : '未配置API'}">
+                    <i class="fas ${hasApi ? 'fa-plug' : 'fa-plug-circle-exclamation'}"></i>
+                </div>
+            </div>
+            
+            <div class="part-tags">
+                ${(part.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+            
+            <!-- ✨ 关键：插入技能按钮 -->
+            ${skillsHtml}
 
-    card.innerHTML = `
-        ${deleteBtnHtml}
-        <div class="part-icon"><i class="fas ${part.icon || 'fa-user'}"></i></div>
-        <div class="part-info">
-            <div class="part-name">${part.name}</div>
-            <div class="part-desc" title="${part.description || ''}">${part.description || '暂无描述'}</div>
-            <div class="part-tags">${tagsHtml}</div>
+            <div class="part-actions">
+                <button class="btn-api-config" onclick="window.showApiConfig('${part.id}', event)">
+                    <i class="fas fa-cog"></i> 配置API
+                </button>
+            </div>
         </div>
-        <div class="part-actions">
-            <button class="btn-icon" onclick="window.Modals.showApiConfig('${part.id}', event)" title="配置API">
-                <i class="fas fa-cog"></i>
-            </button>
-            <button class="btn-icon" onclick="window.Modals.showRoleDetails('${part.id}')" title="查看详情">
-                <i class="fas fa-info-circle"></i>
-            </button>
-            <button class="btn-icon" onclick="window.Modals.createCustomRoleWindow('${part.id}')" title="对话测试">
-                <i class="fas fa-comment-dots"></i>
-            </button>
-        </div>
-    `;
-
-    // 绑定右键菜单
-    card.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (window.showContextMenu) {
-            window.showContextMenu(e, part);
-        }
-    });
-
-    // 添加“存入仓库”按钮 (如果有权限)
-    decorateRoleCardWithFactoryButton(card, part.id);
-
-    return card;
+        `;
+    }).join('');
 }
+
 
 // 为了兼容 HTML 中的 onclick="window.deleteLocalRole..."
 window.deleteLocalRole = function(roleId, event) {
@@ -148,50 +156,88 @@ window.deleteLocalRole = function(roleId, event) {
     }
 };
 
-export function renderAICategories() {
-    const container = document.getElementById('ai-models-list');
+
+export async function renderAICategories() {
+    // 1. 获取容器 (修正为 model-list 以匹配您的 HTML)
+    const container = document.getElementById('model-list');
     if (!container) return;
-    container.innerHTML = '';
+    
+    // 显示加载状态
+    container.innerHTML = '<div style="padding:10px; color:#666;"><i class="fas fa-spinner fa-spin"></i> 加载模型库...</div>';
 
-    // 1. 预设的云端模型 (DeepSeek, GPT等)
-    const presets = [
-        { id: 'deepseek-chat', name: 'DeepSeek V3', icon: 'fa-brain', desc: '通用对话' },
-        { id: 'deepseek-coder', name: 'DeepSeek Coder', icon: 'fa-code', desc: '代码生成' },
-        { id: 'gpt-4o', name: 'GPT-4o', icon: 'fa-robot', desc: '高级推理' },
-        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', icon: 'fa-bolt', desc: '快速响应' }
-    ];
+    try {
+        // ---------------------------------------------------------
+        // 2. 💡 核心修改：从 Supabase 后台获取模型数据
+        // ---------------------------------------------------------
+        // 假设您的表名叫 'models'。如果是 'ai_models' 或其他名字，请在这里修改
+        const { data: backendModels, error } = await window.supabase
+            .from('models') 
+            .select('*')
+            .order('created_at', { ascending: false });
 
-    presets.forEach(model => {
-        const el = createModelCard(model);
-        container.appendChild(el);
-    });
+        if (error) {
+            console.error("加载模型失败:", error);
+            container.innerHTML = '<div style="color:red;">加载失败</div>';
+            return;
+        }
 
-    // 2. 用户自定义的本地模型 (Ollama等)
-    if (window.modelAPIConfigs) {
-        window.modelAPIConfigs.forEach((config, id) => {
-            if (id.startsWith('custom_')) {
-                const model = { 
-                    id: id, 
-                    name: config.displayName || '未命名模型', 
-                    icon: 'fa-server', 
-                    desc: '本地/自定义模型',
-                    isCustom: true 
+        // 清空加载提示
+        container.innerHTML = '';
+
+        // 3. 渲染后台返回的模型
+        if (backendModels && backendModels.length > 0) {
+            backendModels.forEach(modelData => {
+                // 转换数据格式以适配卡片生成器
+                const model = {
+                    id: modelData.id || modelData.model_id, // 根据数据库字段调整
+                    name: modelData.name || modelData.display_name,
+                    icon: modelData.icon || 'fa-server',
+                    desc: modelData.description || '后台配置模型',
+                    // 如果需要区分是否为自定义（允许前端编辑），可以加判断
+                    isCustom: false 
                 };
+                
                 const el = createModelCard(model);
                 container.appendChild(el);
-            }
-        });
+            });
+        } else {
+            container.innerHTML = '<div style="padding:10px; color:#aaa;">暂无可用模型</div>';
+        }
+
+        // 4. (可选) 渲染本地自定义模型 (window.modelAPIConfigs)
+        // 如果您希望本地配置的模型也能显示，保留此段；否则可删除
+        if (window.modelAPIConfigs) {
+            window.modelAPIConfigs.forEach((config, id) => {
+                if (id.startsWith('custom_')) {
+                    const model = { 
+                        id: id, 
+                        name: config.displayName || '未命名模型', 
+                        icon: 'fa-server', 
+                        desc: '本地/自定义模型',
+                        isCustom: true 
+                    };
+                    const el = createModelCard(model);
+                    container.appendChild(el);
+                }
+            });
+        }
+
+        // 5. 添加“新建模型”按钮 (允许用户添加本地模型)
+        const addBtn = document.createElement('div');
+        // 💡 注意：这里加上 role-card 类名，确保样式统一
+        addBtn.className = 'role-card model-card add-new'; 
+        addBtn.innerHTML = `<div class="role-icon"><i class="fas fa-plus"></i></div><div class="role-info"><div class="role-name">添加模型</div></div>`;
+        addBtn.onclick = () => {
+            if(window.Modals && window.Modals.addCustomModel) window.Modals.addCustomModel();
+        };
+        container.appendChild(addBtn);
+
+    } catch (err) {
+        console.error("渲染模型列表出错:", err);
+        container.innerHTML = '加载出错';
     }
-    
-    // 添加“新建模型”按钮
-    const addBtn = document.createElement('div');
-    addBtn.className = 'model-card add-new';
-    addBtn.innerHTML = `<i class="fas fa-plus"></i> 添加模型`;
-    addBtn.onclick = () => {
-        if(window.Modals && window.Modals.addCustomModel) window.Modals.addCustomModel();
-    };
-    container.appendChild(addBtn);
 }
+
 
 function createModelCard(model) {
     const div = document.createElement('div');
@@ -346,4 +392,5 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
