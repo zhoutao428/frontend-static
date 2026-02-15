@@ -149,7 +149,7 @@ export async function renderAICategories() {
         // 1. 🚀 直接从 Supabase 数据库获取模型列表
         // 假设表名是 'models'，请根据实际情况修改
         const { data: realModels, error } = await window.supabase
-            .from('models')
+            .from('ai_models')
             .select('*')
             .order('provider'); // 按供应商排序
 
@@ -490,6 +490,7 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
 
