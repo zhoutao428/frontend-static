@@ -1,470 +1,289 @@
-// js/modules/ui.js
-import { systemAPI } from '../api.js';
-import { getRoleName, getModelName, getModelColor } from './utils.js';
-// 注意：因为循环依赖，onclick 里的函数名我们直接用 window.xxx，反正 main.js 会挂载
-export function renderPartsGrid() {
-    const grid = document.getElementById('parts-grid');
-    if(!grid) return;
+// 文件名: js/modules/ui.js
 
-    const allParts = window.RolePartsLibrary.getAllPartsEnhanced 
-        ? window.RolePartsLibrary.getAllPartsEnhanced() 
-        : window.RolePartsLibrary.getAllParts();
+import { getRoleName, getModelName } from './utils.js';
+import { RolePartsLibrary } from './role-parts-library.js';
+import { decorateRoleCardWithFactoryButton } from './factory-warehouse-bridge.js';
+import { initializeDragAndDrop } from './drag-drop.js';
+
+// -----------------------------------------------------------------------------
+// 1. 新增：初始化工具栏事件 (修复 main.js 报错)
+// -----------------------------------------------------------------------------
+export function initToolbar() {
+    console.log("🛠️ 初始化工具栏...");
     
-    // 辅助：转义引号
-    const escapeHtml = (text) => text.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-
-    grid.innerHTML = allParts.map(part => {
-        const hasApi = window.apiConfigs.has(part.id);
-        
-        // ✨ 新增：生成技能按钮 HTML
-        const actions = part.actions || [];
-        const skillsHtml = actions.length > 0 
-            ? `<div class="part-skills" style="display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 5px 0;">
-                 ${actions.map(act => `
-                    <button class="btn-mini-skill" 
-                            style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:#cbd5e1; padding:2px 8px; border-radius:4px; font-size:10px; cursor:pointer;"
-                            onclick="event.stopPropagation(); window.quickAction('${part.id}', '${escapeHtml(act.prompt)}')">
-                        <i class="fas fa-bolt" style="color:#fbbf24; margin-right:4px;"></i>${act.label}
-                    </button>
-                 `).join('')}
-               </div>`
-            : '';
-
-        return `
-        <div class="part-card" 
-             onclick="window.showRoleDetails('${part.id}')"
-             draggable="true" 
-             data-role-id="${part.id}"
-             ondragstart="window.onRoleDragStart(event)"
-             ondragend="window.onDragEnd(event)">
-            <div class="part-header">
-                <div class="part-icon" style="background: ${part.color || '#3b82f6'}">
-                    <i class="${part.icon || 'fa-user'}"></i>
-                </div>
-                <div class="part-name">${part.name}</div>
-                <div class="api-status ${hasApi ? 'has-api' : 'no-api'}" 
-                     onclick="window.showApiConfig('${part.id}', event)"
-                     title="${hasApi ? '已配置API' : '未配置API'}">
-                    <i class="fas ${hasApi ? 'fa-plug' : 'fa-plug-circle-exclamation'}"></i>
-                </div>
-            </div>
-            
-            <div class="part-tags">
-                ${(part.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
-            </div>
-            
-            <!-- ✨ 关键：插入技能按钮 -->
-            ${skillsHtml}
-
-            <div class="part-actions">
-                <button class="btn-api-config" onclick="window.showApiConfig('${part.id}', event)">
-                    <i class="fas fa-cog"></i> 配置API
-                </button>
-            </div>
-        </div>
-        `;
-    }).join('');
-}
-
-// js/modules/ui.js
-
-// 渲染右侧 AI 引擎库 (含状态检测)
-export async function renderAICategories() {
-    const container = document.getElementById('ai-categories');
-    if(!container) return;
-
-    try {
-        // 1. 获取云端模型
-        const realModels = await systemAPI.getModels(); 
-        
-        const categories = {
-            'openai': { id: 'openai', name: 'OpenAI', icon: 'fa-robot', expanded: true, models: [] },
-            'google': { id: 'google', name: 'Google', icon: 'fa-google', expanded: true, models: [] },
-            'deepseek': { id: 'deepseek', name: 'DeepSeek', icon: 'fa-code', expanded: true, models: [] },
-            'anthropic': { id: 'anthropic', name: 'Anthropic', icon: 'fa-brain', expanded: true, models: [] }
+    // 绑定 "保存" 按钮
+    const saveBtn = document.getElementById('btn-save');
+    if (saveBtn) {
+        saveBtn.onclick = () => {
+            // 这里假设您有保存逻辑，或者暂时用 alert
+            if (window.saveWorkflowToHomepage) {
+                window.saveWorkflowToHomepage();
+            } else {
+                alert("保存功能暂未连接到主逻辑。");
+            }
         };
+    }
 
-        // 整理云端模型数据
-        realModels.forEach(m => {
-            const providerKey = categories[m.provider] ? m.provider : 'openai'; 
-            categories[providerKey].models.push({
-                id: m.id, 
-                name: m.display_name, 
-                provider: m.provider, 
-                price: m.sale_price,
-                // 根据类型显示不同图标
-                typeIcon: m.model_type === 'image' ? '🎨' : (m.model_type === 'tts' ? '🗣️' : ''),
-                color: m.provider === 'deepseek' ? '#8b5cf6' : (m.provider === 'openai' ? '#10b981' : '#3b82f6')
-            });
-        });
+    // 绑定 "加载" 按钮
+    const loadBtn = document.getElementById('btn-load');
+    if (loadBtn) {
+        loadBtn.onclick = () => {
+            alert("加载功能开发中...");
+        };
+    }
 
-        // 2. 生成云端模型 HTML
-        let html = Object.values(categories).filter(cat => cat.models.length > 0).map(cat => `
-            <div class="ai-category ${cat.expanded ? 'expanded' : ''}">
-                <div class="ai-category-header" onclick="this.parentElement.classList.toggle('expanded')">
-                    <i class="fas fa-chevron-right"></i>
-                    <i class="fas ${cat.icon}"></i>
-                    <span>${cat.name}</span>
-                </div>
-                <div class="ai-models">
-                    ${cat.models.map(model => `
-                        <div class="ai-model-card"
-                             draggable="true"
-                             data-model-id="${model.id}" 
-                             ondragstart="window.onModelDragStart(event)"
-                             ondragend="window.onDragEnd(event)">
-                            
-                            <div class="model-icon" style="background: ${model.color}">
-                                ${model.name.charAt(0)}
-                            </div>
-                            
-                            <div class="model-info">
-                                <div class="model-name">
-                                    ${model.typeIcon} ${model.name}
-                                </div>
-                                <div class="model-provider">
-                                    <i class="fas fa-coins" style="color:#fbbf24;margin-right:4px"></i>
-                                    ${model.price} 积分
-                                </div>
-                            </div>
-
-                            <!-- 🚦 状态灯 (默认灰色，稍后 JS 变色) -->
-                            <div class="model-api-status" 
-                                 id="status-${model.id}"
-                                 title="正在检测..."
-                                 style="cursor: help; display:flex; align-items:center; justify-content:center;">
-                                <i class="fas fa-circle" style="color:#64748b; font-size:10px;"></i>
-                            </div>
-                            
-                            <!-- 锁定按钮 -->
-                            <button class="model-config-btn" style="opacity:0.3; cursor:not-allowed">
-                                <i class="fas fa-lock"></i>
-                            </button>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `).join('');
-
-        // 3. 追加本地自定义模型
-        if (window.modelAPIConfigs) {
-            const customModelsHTML = Array.from(window.modelAPIConfigs.entries())
-                .filter(([id]) => id.startsWith('custom_'))
-                .map(([id, config]) => `
-                    <div class="ai-model-card" draggable="true" data-model-id="${id}" 
-                         ondragstart="window.onModelDragStart(event)" ondragend="window.onDragEnd(event)">
-                        <div class="model-icon" style="background: #f59e0b">L</div>
-                        <div class="model-info">
-                            <div class="model-name">${config.displayName || '自定义模型'}</div>
-                            <div class="model-provider">本地</div>
-                        </div>
-                        <div class="model-api-status configured" title="本地配置"><i class="fas fa-plug"></i></div>
-                        <button class="model-config-btn" onclick="window.showModelAPIConfig('${id}', event)"><i class="fas fa-cog"></i></button>
-                    </div>
-                `).join('');
-
-            if (customModelsHTML) {
-                html = `
-                <div class="ai-category expanded" style="border-left: 3px solid #f59e0b;">
-                    <div class="ai-category-header" onclick="this.parentElement.classList.toggle('expanded')">
-                        <i class="fas fa-server"></i>
-                        <span>自定义模型 (本地)</span>
-                    </div>
-                    <div class="ai-models">${customModelsHTML}</div>
-                </div>` + html;
+    // 绑定 "清空" 按钮
+    const clearBtn = document.getElementById('btn-clear');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            if (confirm("确定要清空组装台吗？所有未保存的更改将丢失。")) {
+                if (window.builderData) window.builderData = [];
+                renderGroups(); // 重新渲染组装台
             }
-        }
-
-        // 4. 渲染 HTML
-        container.innerHTML = html;
-
-        // 5. 🚀 异步启动状态检测
-        Object.values(categories).forEach(cat => {
-            cat.models.forEach(model => checkModelHealth(model.id, model.provider));
+        };
+    }
+    
+    // 初始化侧边栏搜索框
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterParts(e.target.value);
         });
-
-    } catch (err) {
-        console.error("加载模型失败:", err);
-        container.innerHTML = '<div class="p-4 text-gray-500">加载失败</div>';
     }
 }
 
-// 异步检测模型状态
-async function checkModelHealth(modelId, provider) {
-    const statusEl = document.getElementById(`status-${modelId}`);
-    if (!statusEl) return;
+// -----------------------------------------------------------------------------
+// 2. 原有逻辑 (加上 export)
+// -----------------------------------------------------------------------------
 
-    // 检查用户是否配置了自定义 Key
-    const userKey = localStorage.getItem(`${provider}_api_key`); // 比如 deepseek_api_key
+export function renderPartsGrid() {
+    const container = document.getElementById('parts-grid');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const allParts = RolePartsLibrary.getAllParts();
     
-    if (userKey) {
-        // === 蓝色方案：用户自带 Key ===
-        statusEl.innerHTML = '<i class="fas fa-user-check" style="color:#3b82f6"></i>'; // 蓝人头
-        statusEl.title = "使用您的自定义 Key (免费)";
-        
-        // 进一步：真的发个请求测试一下 (可选，怕费流量可以不做)
-        // await testUserKey(provider, userKey)...
-        
+    allParts.forEach(part => {
+        const card = createRoleCard(part);
+        container.appendChild(card);
+    });
+
+    // 重新初始化拖拽，确保新生成的卡片也能拖
+    if (window.DragDrop && window.DragDrop.initializeDragAndDrop) {
+        window.DragDrop.initializeDragAndDrop();
     } else {
-        // === 绿色方案：平台托管 ===
-        // 这里我们默认平台是通的 (或者去调后台 /api/health 接口)
-        // 简单起见，直接给绿灯
-        statusEl.innerHTML = '<i class="fas fa-cloud" style="color:#10b981"></i>'; // 绿云
-        statusEl.title = "平台托管 (正常)";
-        
-        // 如果你想做故障检测：
-        /*
-        try {
-            const res = await fetch('/api/chat/ping', { method: 'HEAD' });
-            if (!res.ok) throw new Error();
-        } catch (e) {
-            statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ef4444"></i>';
-            statusEl.title = "平台服务异常";
-        }
-        */
-    }
-}
-export function renderGroups() {
-    const container = document.getElementById('groups-container');
-    if(!container) return;
-
-    // 辅助函数：转义 HTML 字符 (必须定义在这里，或者在文件顶部)
-    const escapeHtml = (text) => text ? text.replace(/'/g, "&apos;").replace(/"/g, "&quot;") : '';
-
-    container.innerHTML = window.builderData.map((group, index) => `
-        <div class="build-group" data-group-index="${index}" 
-             ondragover="window.onGroupDragOver(event, ${index})" 
-             ondragleave="window.onGroupDragLeave(event, ${index})" 
-             ondrop="window.onGroupDrop(event, ${index})">
-            
-            <div class="group-header">
-                <input type="text" class="group-name-input" 
-                       value="${group.name === '规划阶段' ? '' : group.name}" 
-                       placeholder="${group.name === '规划阶段' ? '规划阶段' : '新分组'}" 
-                       onchange="window.updateGroupName(${index}, this.value || '新分组')">
-                <button onclick="window.removeGroup(${index})" title="删除"><i class="fas fa-trash" style="color:#ef4444;"></i></button>
-            </div>
-
-            <div class="group-roles" id="group-roles-${index}">
-                ${group.roles.map(roleId => {
-                    const boundModel = window.bindings.get(roleId);
-                    const hasApi = window.apiConfigs.has(roleId);
-                    
-                    // ⚠️ 关键：定义 taskDesc
-                    const taskDesc = (group.tasks && group.tasks[roleId]) || '';
-
-                    return `<div class="role-in-group ${boundModel ? 'bound' : ''}" 
-                         data-role-id="${roleId}" 
-                         onclick="window.showTaskDetails('${roleId}', '${escapeHtml(taskDesc)}')" 
-                         title="${taskDesc || '点击查看详情'}">
-                    
-                        <!-- 图标 -->
-                        <i class="fas fa-user" style="margin-right:8px; opacity:0.7;"></i>
-                        
-                        <!-- 名字 -->
-                        <span>${getRoleName(roleId)}</span>
-                        
-                        <!-- 插头 (API状态) -->
-                        ${hasApi ? `<i class="fas fa-plug" style="color:#10b981; margin-left:auto;"></i>` : ''}
-                        
-                        <!-- 模型徽章 -->
-                        ${boundModel ? `<span class="model-badge">${getModelName(boundModel)}</span>` : ''}
-                        
-                    </div>`;
-                }).join('')}
-            </div>
-        </div>`).join('');
-
-    // 更新拖拽提示
-    const dropHint = document.getElementById('drop-hint');
-    if(dropHint) dropHint.style.display = window.builderData.some(g => g.roles.length > 0) ? 'none' : 'block';
-}
-
-export function updateBindingsUI() {
-    const list = document.getElementById('binding-list');
-    const boundCount = document.getElementById('bound-roles-count');
-    const usedModelsCount = document.getElementById('used-models-count');
-    if(!list) return;
-    list.innerHTML = Array.from(window.bindings.entries()).map(([roleId, modelId]) => `
-        <div class="binding-item"><span>${getRoleName(roleId)}</span><span class="binding-arrow">→</span><span style="color:${getModelColor(modelId)}">${getModelName(modelId)}</span></div>`).join('');
-    if(boundCount) boundCount.textContent = window.bindings.size;
-    if(usedModelsCount) usedModelsCount.textContent = new Set(Array.from(window.bindings.values())).size;
-}
-
-// 辅助 UI 函数
-export function addNewCategory() {
-    const name = prompt('请输入新角色的名称:');
-    if (!name || !name.trim()) return;
-    try {
-        const newPartId = window.RolePartsLibrary.userParts.create({
-            name: name.trim(), category: 'custom', icon: 'fa-user-tag', color: '#94a3b8', tags: ['待定义'], description: '这是一个初始概念角色。'
-        });
-        renderPartsGrid();
-        console.log(`✨ 已创建白板角色: ${name}`);
-    } catch (error) { alert(`创建失败: ${error.message}`); }
-}
-export function addGroup() {
-    window.builderData.push({ id: 'g' + Date.now(), name: '新分组', roles: [] });
-    renderGroups();
-}
-export function removeGroup(index) {
-    window.builderData[index].roles.forEach(roleId => window.bindings.delete(roleId));
-    window.builderData.splice(index, 1);
-    renderGroups();
-    updateBindingsUI();
-}
-// ... (前面的代码保持不变)
-
-export function updateGroupName(index, name) {
-    if (window.builderData && window.builderData[index]) {
-        window.builderData[index].name = name;
+        // 兼容旧的拖拽初始化
+        initializeDragAndDrop();
     }
 }
 
-export function toggleSearch() { 
-    alert("搜索功能开发中"); 
-}
-
-export function refreshModels() { 
-    renderAICategories(); 
-}
-
-export function toggleAICategory(categoryId) {
-    // 简单实现：找到对应元素并切换类名
-    // 这里其实不依赖 categoryId，因为 HTML 里的 onclick 是直接绑定到 this.parentElement 的
-    // 但为了兼容可能的显式调用，保留空壳或者实现逻辑
-    const items = document.querySelectorAll('.ai-category');
-    items.forEach(item => item.classList.toggle('expanded')); 
-}
-
-// 别忘了加上 renderAll 总入口
-export function renderAll() {
-    renderPartsGrid();
-    renderAICategories();
-    renderGroups();
-    updateBindingsUI();
-}
-export function updateApiStatus(roleId) {
-    // 找到所有代表这个角色的卡片 (无论在左侧还是中间)
-    const cards = document.querySelectorAll(`[data-role-id="${roleId}"] .api-status`);
-    const hasApi = window.apiConfigs.has(roleId);
+export function createRoleCard(part) {
+    const card = document.createElement('div');
+    card.className = `part-card ${part.category || 'custom'}`;
+    if (part.bg_class) card.classList.add(part.bg_class);
     
-    cards.forEach(el => {
-        if (hasApi) {
-            el.classList.add('has-api');
-            el.classList.remove('no-api');
-            el.innerHTML = '<i class="fas fa-plug"></i>';
-            el.title = '已配置API';
-        } else {
-            el.classList.remove('has-api');
-            el.classList.add('no-api');
-            el.innerHTML = '<i class="fas fa-plug-circle-exclamation"></i>';
-            el.title = '未配置API';
-        }
-    });
-}
-// ============ 粉碎机模块 (复活版) ============
+    card.draggable = true;
+    card.dataset.id = part.id;
+    card.dataset.type = 'role'; // 明确标记为角色
+    
+    // 确保把完整数据绑定到 DOM 元素上，供拖拽时使用
+    card.data = part; 
 
-export function initTrashCan() {
-    // 防止重复创建
-    if (document.getElementById('trash-can')) return;
+    // 构建标签HTML
+    const tagsHtml = (part.tags || part.expertise || []).slice(0, 3)
+        .map(tag => `<span class="tag">${tag}</span>`).join('');
 
-    // 1. 动态插入样式
-    const style = document.createElement('style');
-    style.innerHTML = `
-        #trash-can {
-            position: fixed; left: 30px; bottom: 30px; width: 70px; height: 70px;
-            background: rgba(30, 41, 59, 0.8); border: 2px dashed #475569; border-radius: 50%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #cbd5e1; cursor: pointer; z-index: 9999;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(4px); user-select: none;
-        }
-        #trash-can i { font-size: 24px; margin-bottom: 4px; }
-        #trash-can span { font-size: 10px; }
-        #trash-can.drag-over {
-            background: rgba(239, 68, 68, 0.9); border-color: #fca5a5;
-            transform: scale(1.15) rotate(-5deg); color: white;
-            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.5);
-        }
-        @keyframes shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
-        .shaking { animation: shake 0.5s ease-in-out; }
+    // 如果是自定义角色，添加删除按钮
+    let deleteBtnHtml = '';
+    if (part.is_local && part.is_deletable) {
+        deleteBtnHtml = `<button class="delete-role-btn" onclick="window.deleteLocalRole('${part.id}', event)" title="删除此角色">×</button>`;
+    }
+
+    card.innerHTML = `
+        ${deleteBtnHtml}
+        <div class="part-icon"><i class="fas ${part.icon || 'fa-user'}"></i></div>
+        <div class="part-info">
+            <div class="part-name">${part.name}</div>
+            <div class="part-desc" title="${part.description || ''}">${part.description || '暂无描述'}</div>
+            <div class="part-tags">${tagsHtml}</div>
+        </div>
+        <div class="part-actions">
+            <button class="btn-icon" onclick="window.Modals.showApiConfig('${part.id}', event)" title="配置API">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button class="btn-icon" onclick="window.Modals.showRoleDetails('${part.id}')" title="查看详情">
+                <i class="fas fa-info-circle"></i>
+            </button>
+            <button class="btn-icon" onclick="window.Modals.createCustomRoleWindow('${part.id}')" title="对话测试">
+                <i class="fas fa-comment-dots"></i>
+            </button>
+        </div>
     `;
-    document.head.appendChild(style);
 
-    // 2. 动态创建DOM
-    const trash = document.createElement('div');
-    trash.id = 'trash-can';
-    trash.innerHTML = `<i class="fas fa-trash-alt"></i><span>粉碎机</span>`;
-    document.body.appendChild(trash);
-
-    // 3. 绑定事件
-    trash.addEventListener('dragover', (e) => {
-        e.preventDefault(); // 👈 关键
-        if (isValidTrashItem()) trash.classList.add('drag-over');
-    });
-
-    trash.addEventListener('dragleave', () => trash.classList.remove('drag-over'));
-
-    trash.addEventListener('drop', (e) => {
+    // 绑定右键菜单
+    card.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        trash.classList.remove('drag-over');
-        if (isValidTrashItem()) handleTrashDelete();
-        else alert("🚫 此物品不可销毁 (系统预制/云端角色)");
+        if (window.showContextMenu) {
+            window.showContextMenu(e, part);
+        }
     });
+
+    // 添加“存入仓库”按钮 (如果有权限)
+    decorateRoleCardWithFactoryButton(card, part.id);
+
+    return card;
 }
 
-// ✅ 修复：兼容 local_ 和 user_ 前缀
-function isValidTrashItem() {
-    if (window.draggedType !== 'role' || !window.draggedItem) return false;
-    
-    let roleId = window.draggedItem.id || window.draggedItem;
-    roleId = String(roleId); // 确保是字符串
-
-    // 允许删除 user_ (旧版) 和 local_ (新版)
-    return roleId.startsWith('user_') || roleId.startsWith('local_');
-}
-
-// ✅ 修复：正确删除 LocalStorage
-function handleTrashDelete() {
-    let roleId = window.draggedItem.id || window.draggedItem;
-    // 尝试获取名字 (如果有的话)
-    const roleName = window.draggedItem.name || '该角色';
-
-    if (confirm(`⚠️ 确定要粉碎 [${roleName}] 吗？\n此操作无法撤销。`)) {
-        
-        // 1. 从 LocalStorage 移除
-        let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
-        const oldLen = localRoles.length;
-        localRoles = localRoles.filter(r => r.id !== roleId);
-        
-        if (localRoles.length < oldLen) {
-            localStorage.setItem('user_templates', JSON.stringify(localRoles));
-            
-            // 2. 视觉反馈
-            const trash = document.getElementById('trash-can');
-            trash.classList.add('shaking');
-            setTimeout(() => trash.classList.remove('shaking'), 500);
-            
-            // 3. 刷新列表
-            if (window.RolePartsLibrary && window.RolePartsLibrary.loadUserRoles) {
-                window.RolePartsLibrary.loadUserRoles();
-            } else if (window.renderPartsGrid) {
-                window.renderPartsGrid();
-            }
-            
-            console.log(`🗑️ 已粉碎角色: ${roleId}`);
+// 为了兼容 HTML 中的 onclick="window.deleteLocalRole..."
+window.deleteLocalRole = function(roleId, event) {
+    if (event) event.stopPropagation();
+    if (confirm(`确定要删除角色 [${getRoleName(roleId)}] 吗？此操作不可恢复。`)) {
+        const success = RolePartsLibrary.userParts.delete(roleId);
+        if (success) {
+            renderPartsGrid();
+            if (window.showToast) window.showToast('角色已删除', 'success');
         } else {
-            // 如果 Storage 里没找到，可能是在内存里 (旧版逻辑)
-            if (window.RolePartsLibrary?.userParts?.delete) {
-                window.RolePartsLibrary.userParts.delete(roleId);
-                // 强制刷新 UI
-                if (window.renderPartsGrid) window.renderPartsGrid();
-            }
+            alert('删除失败');
         }
     }
+};
+
+export function renderAICategories() {
+    const container = document.getElementById('ai-models-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // 1. 预设的云端模型 (DeepSeek, GPT等)
+    const presets = [
+        { id: 'deepseek-chat', name: 'DeepSeek V3', icon: 'fa-brain', desc: '通用对话' },
+        { id: 'deepseek-coder', name: 'DeepSeek Coder', icon: 'fa-code', desc: '代码生成' },
+        { id: 'gpt-4o', name: 'GPT-4o', icon: 'fa-robot', desc: '高级推理' },
+        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', icon: 'fa-bolt', desc: '快速响应' }
+    ];
+
+    presets.forEach(model => {
+        const el = createModelCard(model);
+        container.appendChild(el);
+    });
+
+    // 2. 用户自定义的本地模型 (Ollama等)
+    if (window.modelAPIConfigs) {
+        window.modelAPIConfigs.forEach((config, id) => {
+            if (id.startsWith('custom_')) {
+                const model = { 
+                    id: id, 
+                    name: config.displayName || '未命名模型', 
+                    icon: 'fa-server', 
+                    desc: '本地/自定义模型',
+                    isCustom: true 
+                };
+                const el = createModelCard(model);
+                container.appendChild(el);
+            }
+        });
+    }
+    
+    // 添加“新建模型”按钮
+    const addBtn = document.createElement('div');
+    addBtn.className = 'model-card add-new';
+    addBtn.innerHTML = `<i class="fas fa-plus"></i> 添加模型`;
+    addBtn.onclick = () => {
+        if(window.Modals && window.Modals.addCustomModel) window.Modals.addCustomModel();
+    };
+    container.appendChild(addBtn);
 }
 
-// 自动启动
-document.addEventListener('DOMContentLoaded', initTrashCan);
+function createModelCard(model) {
+    const div = document.createElement('div');
+    div.className = 'model-card';
+    div.draggable = true;
+    div.dataset.id = model.id;
+    div.dataset.type = 'model'; // 明确标记为模型
+    
+    // 绑定数据供拖拽使用
+    div.data = model;
 
+    let editBtnHtml = '';
+    if (model.isCustom) {
+        editBtnHtml = `<i class="fas fa-cog config-icon" onclick="window.Modals.showModelAPIConfig('${model.id}', event)"></i>`;
+    }
+
+    div.innerHTML = `
+        <i class="fas ${model.icon}"></i>
+        <div class="model-info">
+            <div class="model-name">${model.name}</div>
+            <div class="model-desc">${model.desc}</div>
+        </div>
+        ${editBtnHtml}
+    `;
+    return div;
+}
+
+export function filterParts(keyword) {
+    const cards = document.querySelectorAll('.part-card');
+    const lowerKey = keyword.toLowerCase();
+    
+    cards.forEach(card => {
+        const name = card.querySelector('.part-name').innerText.toLowerCase();
+        const desc = card.querySelector('.part-desc').innerText.toLowerCase();
+        const tags = Array.from(card.querySelectorAll('.tag')).map(t => t.innerText.toLowerCase());
+        
+        if (name.includes(lowerKey) || desc.includes(lowerKey) || tags.some(t => t.includes(lowerKey))) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// -----------------------------------------------------------------------------
+// 3. 其他UI辅助函数
+// -----------------------------------------------------------------------------
+
+export function setupDynamicListeners() {
+    // 可以在这里添加一些动态生成的元素的事件监听
+    // 或者处理窗口缩放等
+    window.addEventListener('resize', () => {
+        // ... 响应式布局调整 ...
+    });
+}
+
+export function showToast(message, type = 'info') {
+    // 创建一个简单的 Toast 提示
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.cssText = `
+        position: fixed; top: 20px; right: 20px; 
+        padding: 10px 20px; background: #333; color: #fff; 
+        border-radius: 4px; z-index: 9999; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    if (type === 'success') toast.style.background = '#10b981';
+    if (type === 'error') toast.style.background = '#ef4444';
+    
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => document.body.removeChild(toast), 300);
+    }, 3000);
+}
+
+// 渲染组装台 (这个函数可能在 main.js 或 workflow.js 中也有用到，放在这里作为 UI 渲染的一部分)
+export function renderGroups() {
+    const stage = document.getElementById('workflow-stage'); // 假设组装台容器ID
+    if (!stage) return;
+    stage.innerHTML = '';
+    
+    if (!window.builderData || window.builderData.length === 0) {
+        stage.innerHTML = `<div class="empty-state">拖入角色以组装工作流...</div>`;
+        return;
+    }
+    
+    // ... 这里可以添加具体的组装台渲染逻辑 ...
+    // 如果您原来的 ui.js 里有 renderGroups 的具体实现，请把它加在这里
+    console.log("渲染组装台:", window.builderData);
+}
