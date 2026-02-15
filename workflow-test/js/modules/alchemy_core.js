@@ -49,14 +49,12 @@ export function checkAlchemyReady() {
         console.log('✅ 原料齐备，准备启动角色生成...');
         
         // 动态导入并执行角色生成函数
-        import('./role_generation.js')
-            .then(module => {
-                if (module.startAIAlchemy) {
-                    module.startAIAlchemy(roleMaterial, modelMaterial);
-                } else {
-                    console.error("未能从 role_generation.js 中加载 startAIAlchemy 函数。");
-                }
-            })
-            .catch(err => console.error("加载 role_generation.js 模块失败:", err));
-    }
+        // ✅ 既然是全局脚本，直接调就完事了！
+if (window.startAIAlchemy) {
+    window.startAIAlchemy(roleMaterial, modelMaterial);
+} else {
+    // 防止 HTML 里没引用 role_generation.js
+    console.error("❌ 找不到 window.startAIAlchemy 函数！请检查 HTML 是否引入了 role_generation.js");
 }
+
+
