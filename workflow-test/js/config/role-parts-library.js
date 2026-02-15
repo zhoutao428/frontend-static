@@ -1,7 +1,5 @@
 // js/modules/role-parts-library.js
 
-// js/role-parts-library.js
-
 const RolePartsLibrary = {
     systemParts: [],
     // ✨ 新增：临时角色列表 (只在内存里，不存硬盘)
@@ -99,3 +97,4 @@ const RolePartsLibrary = {
 
 // ⚠️ 关键：手动挂载到全局，因为没有 export
 window.RolePartsLibrary = RolePartsLibrary;
+
