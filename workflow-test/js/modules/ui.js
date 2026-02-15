@@ -55,28 +55,6 @@ export function initToolbar() {
 // -----------------------------------------------------------------------------
 // 2. 原有逻辑 (加上 export)
 // -----------------------------------------------------------------------------
-
-export function renderPartsGrid() {
-    const container = document.getElementById('role-container'); // ✅ 您的 HTML 里叫 role-container
-    if (!container) return;
-    container.innerHTML = '';
-
-    const allParts = RolePartsLibrary.getAllParts();
-    
-    allParts.forEach(part => {
-        const card = createRoleCard(part);
-        container.appendChild(card);
-    });
-
-    // 重新初始化拖拽，确保新生成的卡片也能拖
-    if (window.DragDrop && window.DragDrop.initializeDragAndDrop) {
-        window.DragDrop.initializeDragAndDrop();
-    } else {
-        // 兼容旧的拖拽初始化
-        initializeDragAndDrop();
-    }
-}
-
 export function renderPartsGrid() {
     const grid = document.getElementById('parts-grid');
     if(!grid) return;
@@ -392,5 +370,6 @@ export function updateBindingsUI() {
         }
     });
 }
+
 
 
