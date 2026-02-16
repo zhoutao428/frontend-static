@@ -183,5 +183,149 @@ function bindModelToRole(roleId, modelId) {
     renderGroups();
     log(`绑定: ${roleId} → ${modelId}`);
 }
+
+// 1. 初始化拖放系统
+function initializeDragAndDrop() {
+    console.log("🖱️ 初始化拖放系统...");
+
+    // 设置可拖拽源 (Draggables)
+    const draggables = document.querySelectorAll('.part-card, .model-card, .role-card'); // 兼容所有类名
+    draggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', (e) => {
+            // 使用全局函数处理 (如果 ui.js 里有的话)
+            if (window.onRoleDragStart) {
+                window.onRoleDragStart(e);
+            } else {
+                // 兜底逻辑
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    id: draggable.dataset.id,
+                    type: draggable.dataset.type,
+                    name: draggable.querySelector('.part-name, .model-name, .role-name')?.innerText || '未知'
+                }));
+            }
+            e.dataTransfer.effectAllowed = 'copy';
+            draggable.classList.add('dragging');
+        });
+
+        draggable.addEventListener('dragend', () => {
+            draggable.classList.remove('dragging');
+        });
+    });
+
+    // 2. 设置炼丹炉投放区
+    const furnaceZone = document.getElementById('alchemy-drop-zone');
+    if (furnaceZone) {
+        furnaceZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            furnaceZone.classList.add('drag-over');
+        });
+
+        furnaceZone.addEventListener('dragleave', () => {
+            furnaceZone.classList.remove('drag-over');
+        });
+
+        furnaceZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            furnaceZone.classList.remove('drag-over');
+            
+            // 尝试解析数据
+            let data;
+            try {
+                data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            } catch (err) {
+                console.error("拖拽数据解析失败", err);
+                return;
+            }
+            
+            handleFurnaceDrop(data);
+        });
+    }
+
+    // 3. 设置工作流组装台投放区
+    const workflowStage = document.getElementById('workflow-stage');
+    if (workflowStage) {
+        workflowStage.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            workflowStage.classList.add('drag-over');
+        });
+        
+        workflowStage.addEventListener('dragleave', () => {
+            workflowStage.classList.remove('drag-over');
+        });
+
+        workflowStage.addEventListener('drop', (e) => {
+            e.preventDefault();
+            workflowStage.classList.remove('drag-over');
+            
+            let data;
+            try {
+                data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            } catch (err) { return; }
+
+            // 只有角色才能拖入工作流组装台
+            if (data.type === 'role') {
+                handleWorkflowDrop(data);
+            } else {
+                alert("组装台只接受 [角色] 卡片！");
+            }
+        });
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 内部处理函数
+// -----------------------------------------------------------------------------
+
+function handleFurnaceDrop(item) {
+    if (!window.alchemyState) return;
+
+    console.log("放入炉子:", item);
+
+    // 检查是否已存在同类物品
+    const existingIndex = window.alchemyState.materials.findIndex(m => m.type === item.type);
+    
+    if (existingIndex !== -1) {
+        // 替换旧的
+        window.alchemyState.materials[existingIndex] = item;
+    } else {
+        // 添加新的
+        if (window.alchemyState.materials.length < 2) {
+            window.alchemyState.materials.push(item);
+        } else {
+            alert("炼丹炉已满！请先清空或替换。");
+            return;
+        }
+    }
+
+    // 更新UI显示 (调用全局函数)
+    if (window.updateFurnaceDisplay) window.updateFurnaceDisplay();
+    
+    // 检查是否满足炼丹条件 (调用全局函数)
+    if (window.checkAlchemyReady) window.checkAlchemyReady();
+}
+
+function handleWorkflowDrop(roleItem) {
+    if (!window.builderData) window.builderData = [];
+
+    // 创建一个新的组 (Step)
+    const newGroup = {
+        id: `g_${Date.now()}`,
+        name: `步骤 ${window.builderData.length + 1}`,
+        roles: [roleItem.id], // 存放角色ID
+        tasks: { [roleItem.id]: "请输入任务指令..." }
+    };
+
+    window.builderData.push(newGroup);
+    
+    // 重新渲染组装台 (调用全局函数)
+    if (window.renderGroups) window.renderGroups();
+}
+
+// -----------------------------------------------------------------------------
+// 3. 挂载到 Window (放在最后)
+// -----------------------------------------------------------------------------
 window.initializeDragAndDrop = initializeDragAndDrop;
+// 不需要挂载 handleFurnaceDrop，因为它是内部使用的
+
+
 
