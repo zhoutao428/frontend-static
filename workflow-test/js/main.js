@@ -111,3 +111,6 @@ window.togglePinDebugPanel = Utils.togglePinDebugPanel;
 window.simulateInteraction = RoleGen.simulateInteraction;
 // 手动挂载炼丹入口，供 drag-drop.js 调用
 window.startAIAlchemy = RoleGen.startAIAlchemy;
+window.sendRoleMessage = RoleGen.sendRoleMessage;
+window.createCustomRoleWindow = RoleGen.createCustomRoleWindow;
+
