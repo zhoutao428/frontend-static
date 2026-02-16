@@ -17,6 +17,7 @@ export async function startAIAlchemy(roleMaterial, modelMaterial) {
     const roleId = roleMaterial.id; 
     const modelId = modelMaterial.id;
     
+    // 获取原始数据
     const lib = window.RolePartsLibrary || RolePartsLibrary;
     const rawRole = lib.getRoleDetailsEnhanced(roleId);
     
@@ -28,7 +29,7 @@ export async function startAIAlchemy(roleMaterial, modelMaterial) {
 
     console.log(`🔥 开始炼丹: ${rawRole.name}`);
 
-    // 🎬 1. 启动动画 (如果存在)
+    // 🎬 1. 启动动画 (复用旧版逻辑：先启动)
     if (window.AlchemyAnimation && window.AlchemyAnimation.start) {
         window.AlchemyAnimation.start(
             { name: rawRole.name, icon: rawRole.icon || 'fa-user' }, 
@@ -36,36 +37,28 @@ export async function startAIAlchemy(roleMaterial, modelMaterial) {
         );
     }
 
-    // ⏱️ 2. 创建一个最小动画时间的 Promise (比如 3000ms)
-    // 这样哪怕 API 瞬间返回，动画也会至少播 3 秒
-    const animationMinTime = new Promise(resolve => setTimeout(resolve, 3000));
-
     try {
-        console.log(`🤖 正在调用后台配方...`);
+        console.log(`🤖 请求云端炼丹 (使用后台配方)...`);
         
-        // 🚀 3. 并行执行：API 请求 + 动画倒计时
-        // Promise.all 会等待两个都完成
-        const [enhancedData, _] = await Promise.all([
-            callRealAIForEnhancement(rawRole, modelId), // 您的真实后台请求
-            animationMinTime // 必须等动画播完
-        ]);
+        // 🚀 2. 真实调用 (不加额外延迟，API多快动画就多快)
+        const enhancedData = await callRealAIForEnhancement(rawRole, modelId);
         
         if (!enhancedData) throw new Error("AI未返回有效数据");
 
-        // 4. 构造新角色数据
+        // 3. 构造新角色数据
         const updatedRoleData = {
             ...rawRole,
             ...enhancedData,
-            is_temp: true, // 标记为临时
+            is_temp: true, // 保留今天的修改：标记为临时
             is_local: false
         };
 
-        // 5. 更新临时列表
+        // 4. 更新临时列表 (保留今天的修改：解决双胞胎)
         lib.tempManager.upsert(updatedRoleData);
 
         console.log(`✅ 角色生成完毕 (临时状态)`);
-        
-        // 🎬 6. 动画完成收尾
+
+        // 🎬 5. 动画完成 (API 回来后立刻调用)
         if (window.AlchemyAnimation && window.AlchemyAnimation.finish) {
             window.AlchemyAnimation.finish();
         }
@@ -76,15 +69,16 @@ export async function startAIAlchemy(roleMaterial, modelMaterial) {
         console.error("炼丹失败:", err);
         showToast(`❌ 炼丹失败: ${err.message}`, 'error');
         
-        // 🎬 动画报错效果
+        // 🎬 动画报错
         if (window.AlchemyAnimation && window.AlchemyAnimation.showError) {
             window.AlchemyAnimation.showError(err.message);
         }
     } finally {
-        // 延迟重置，让用户看清结果
+        // 延迟重置，给用户看一眼结果
         setTimeout(resetFurnace, 1500);
     }
 }
+
 
 function resetFurnace() {
     if (window.alchemyState) {
@@ -203,3 +197,4 @@ async function callRealAIForEnhancement(roleInfo, modelId) {
     
     return enhancedData;
 }
+
