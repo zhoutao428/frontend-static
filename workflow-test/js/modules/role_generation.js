@@ -17,18 +17,23 @@ export async function startAIAlchemy(roleMaterial, modelMaterial) {
     const roleId = roleMaterial.id; 
     const modelId = modelMaterial.id;
     
-    // 获取原始数据
+        // 获取原始数据
     const lib = window.RolePartsLibrary || RolePartsLibrary;
-    const rawRole = lib.getRoleDetailsEnhanced(roleId);
     
-    if (!rawRole) {
-        showToast("错误：找不到角色数据", 'error');
-        resetFurnace();
-        return;
+    // 1. 先尝试标准方法
+    let rawRole = lib.getRoleDetailsEnhanced(roleId);
+    
+    // 2. 如果没找到，且ID是用户创建的 (user_开头)，尝试去本地仓库里硬找
+    if (!rawRole && typeof roleId === 'string' && roleId.startsWith('user_')) {
+        console.log(`🔍 标准查找失败，尝试在 userParts 中查找 ID: ${roleId}`);
+        if (lib.userParts && lib.userParts.find) {
+            rawRole = lib.userParts.find(roleId);
+        } else if (lib.userParts && lib.userParts.getAll) {
+            // 如果没有 find 方法，手动遍历
+            const all = lib.userParts.getAll();
+            rawRole = all.find(p => p.id === roleId);
+        }
     }
-
-    console.log(`🔥 开始炼丹: ${rawRole.name}`);
-
     // ---------------------------------------------------------
     // 🎬 动画启动 (采用您提供的兼容逻辑)
     // ---------------------------------------------------------
@@ -179,3 +184,4 @@ async function callRealAIForEnhancement(roleInfo, modelId) {
     if (!data.name) data.name = `${roleInfo.name} (AI版)`;
     return data;
 }
+
