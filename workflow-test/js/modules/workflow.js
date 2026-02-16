@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 // 1. 工作流执行核心
 // -----------------------------------------------------------------------------
-async function executeWorkflow() {
+export async function executeWorkflow() {
     console.log("🚀 开始执行工作流...");
     
     if (!window.builderData || window.builderData.length === 0) {
@@ -48,7 +48,7 @@ async function executeWorkflow() {
     console.log("✅ 工作流执行完毕");
 }
 
-function stopExecution() {
+export function stopExecution() {
     console.log("🛑 停止执行");
     // 这里需要配合 executeWorkflow 里的中断标志来实现，为简化暂只打日志
     alert("停止指令已发送");
@@ -57,7 +57,7 @@ function stopExecution() {
 // -----------------------------------------------------------------------------
 // 2. 单角色执行 (runAgent) - 核心函数
 // -----------------------------------------------------------------------------
-async function runAgent(roleId, prompt) {
+export async function runAgent(roleId, prompt) {
     console.log(`🤖 RunAgent: ${roleId}`);
     
     // 1. 获取角色配置
@@ -79,7 +79,7 @@ async function runAgent(roleId, prompt) {
 // -----------------------------------------------------------------------------
 // 3. AI 自动编排
 // -----------------------------------------------------------------------------
-async function autoOrchestrate(modelId) {
+export async function autoOrchestrate(modelId) {
     const goal = prompt("请输入任务目标 (AI自动规划):");
     if (!goal) return;
     
@@ -97,7 +97,7 @@ async function autoOrchestrate(modelId) {
     if (window.renderGroups) window.renderGroups();
 }
 
-function toggleResultsPanel(show) {
+export function toggleResultsPanel(show) {
     const panel = document.getElementById('results-panel');
     if (panel) {
         panel.style.display = show ? 'flex' : (panel.style.display === 'flex' ? 'none' : 'flex');
@@ -112,3 +112,4 @@ window.stopExecution = stopExecution;
 window.runAgent = runAgent;
 window.autoOrchestrate = autoOrchestrate;
 window.toggleResultsPanel = toggleResultsPanel;
+
