@@ -3,7 +3,7 @@
 /**
  * 初始化全局炼丹炉状态
  */
-export function initializeAlchemyState() {
+function initializeAlchemyState() {
     window.alchemyState = {
         materials: [],      // 存放拖入的 "角色" 和 "模型"
         isProcessing: false // 是否正在炼丹中
@@ -14,7 +14,7 @@ export function initializeAlchemyState() {
 /**
  * 更新炼丹炉（拖放区域）的界面显示
  */
-export function updateFurnaceDisplay() {
+function updateFurnaceDisplay() {
     const dropHint = document.getElementById('drop-hint');
     if (!dropHint || !window.alchemyState) return;
     
@@ -37,7 +37,7 @@ export function updateFurnaceDisplay() {
 /**
  * 检查炼丹原料是否齐备，如果齐备则触发“角色生成”流程
  */
-export function checkAlchemyReady() {
+function checkAlchemyReady() {
     if (!window.alchemyState || window.alchemyState.isProcessing) return;
     
     const materials = window.alchemyState.materials;
@@ -60,6 +60,9 @@ if (window.startAIAlchemy) {
 } // 👈 别忘了这个函数的结束括号
 
 // ⚠️ 手动挂载
+window.initializeAlchemyState = initializeAlchemyState;
+window.updateFurnaceDisplay = updateFurnaceDisplay;
 window.checkAlchemyReady = checkAlchemyReady;
+
 
 
