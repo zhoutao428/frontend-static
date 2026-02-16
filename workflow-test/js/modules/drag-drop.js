@@ -185,7 +185,7 @@ function bindModelToRole(roleId, modelId) {
 }
 
 // 1. 初始化拖放系统
-function initializeDragAndDrop() {
+export function initializeDragAndDrop() {
     console.log("🖱️ 初始化拖放系统...");
 
     // 设置可拖拽源 (Draggables)
@@ -326,6 +326,7 @@ function handleWorkflowDrop(roleItem) {
 // -----------------------------------------------------------------------------
 window.initializeDragAndDrop = initializeDragAndDrop;
 // 不需要挂载 handleFurnaceDrop，因为它是内部使用的
+
 
 
 
