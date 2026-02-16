@@ -1,104 +1,68 @@
 // js/modules/role_generation.js
 
-// 1. 引入依赖 (不再假设，直接引用)
+// 1. 引入依赖
 import { updateFurnaceDisplay } from './alchemy_core.js';
-import { runAgent } from './workflow.js'; // 引入 runAgent，供 sendRoleMessage 使用
+import { runAgent } from './workflow.js';
 import { RolePartsLibrary } from './role-parts-library.js';
 import { showToast } from './ui.js';
 
 // -----------------------------------------------------------------------------
-// 1. 炼丹核心逻辑
+// 1. 炼丹核心逻辑 (导出)
 // -----------------------------------------------------------------------------
-export async function callRealAIForEnhancement(roleInfo, modelId) {
-    const isLocal = modelId.startsWith('custom_') || modelId.includes('localhost');
+export async function startAIAlchemy(roleMaterial, modelMaterial) {
+    if (!window.alchemyState) return;
+
+    window.alchemyState.isProcessing = true;
+    updateFurnaceDisplay();
+
+    const roleId = roleMaterial.id; 
+    const modelId = modelMaterial.id;
+    
+    // 获取原始数据 (使用导入的 RolePartsLibrary)
+    const rawRole = RolePartsLibrary.getRoleDetailsEnhanced(roleId);
+    
+    if (!rawRole) {
+        showToast("错误：找不到角色数据", 'error');
+        resetFurnace();
+        return;
+    }
+
+    console.log(`🔥 开始炼丹: ${rawRole.name}`);
+
+    // ---------------------------------------------------------
+    // 🚀 真实调用开始 (去掉了所有模拟代码)
+    // ---------------------------------------------------------
     let enhancedData = null;
+    try {
+        console.log(`🤖 调用AI API...`);
+        // 调用下面的真实函数
+        enhancedData = await callRealAIForEnhancement(rawRole, modelId);
+        
+        if (!enhancedData) throw new Error("AI未返回有效数据");
 
-    if (isLocal) {
-        console.log(`🔌 使用本地模型直连...`);
-        // 从全局配置获取模型信息
-        const modelConfig = window.modelAPIConfigs ? window.modelAPIConfigs.get(modelId) : null;
-        if (!modelConfig) throw new Error("找不到本地模型配置，请先在右侧配置");
-
-        // 构造 Prompt
-        const simplePrompt = `请为角色 [${roleInfo.name}] 生成JSON定义。
-要求：
-1. description: 限制在30字以内。
-2. tags: 严格限制为5个短词组。
-3. 不要任何解释，直接返回JSON对象。
-
-模板示例：
-{
-  "name": "${roleInfo.name}",
-  "description": "负责统筹拍摄现场，指导演员表演。",
-  "tags": ["场面调度", "剧本分析", "演员指导", "镜头语言", "团队管理"]
-}`;
-        try {
-            const systemPrompt = "你是一个JSON生成器。只返回纯JSON，不要包含Markdown标记，不要包含任何解释性文字。";
-            
-            // 发起请求
-            const response = await fetch(modelConfig.endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: modelConfig.model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: simplePrompt }
-                    ],
-                    stream: false,
-                    format: "json"
-                })
-            });
-
-            if (!response.ok) throw new Error(`本地模型连接失败 (${response.status})`);
-
-            const data = await response.json();
-            // 兼容 Ollama 和其他格式
-            let content = data.message?.content || data.response || data.choices?.[0]?.message?.content;
-            if (!content) throw new Error("模型返回内容为空");
-            
-            // 清理 Markdown 标记
-            content = content.replace(/```json/g, '').replace(/```/g, '').trim();
-            enhancedData = JSON.parse(content);
-
-        } catch (err) {
-            console.error("❌ 本地炼丹失败:", err);
-            throw new Error(`本地模型调用失败: ${err.message}`);
-        }
-    } else {
-        console.log(`🤖 请求云端炼丹...`);
-        try {
-            // 假设 api.js 已挂载到 window.api
-            // 这里的 api 路径可能需要根据您实际的 api.js 调整
-            if (window.api && window.api.alchemyAPI) {
-                enhancedData = await window.api.alchemyAPI.forge(roleInfo.name, modelId);
-            } else if (window.alchemyAPI) {
-                enhancedData = await window.alchemyAPI.forge(roleInfo.name, modelId);
-            } else {
-                throw new Error("找不到云端 API 接口 (window.api.alchemyAPI)");
-            }
-        } catch (err) {
-            console.error("云端炼丹失败:", err);
-            throw err;
-        }
+    } catch (err) {
+        console.error("炼丹失败:", err);
+        showToast(`炼丹失败: ${err.message}`, 'error');
+        resetFurnace();
+        return;
     }
 
-    if (!enhancedData || Object.keys(enhancedData).length === 0) {
-        // 兜底数据
-        enhancedData = {
-            name: `${roleInfo.name} (生成失败)`,
-            description: "AI未返回有效格式。",
-            tags: ["失败"],
-            capabilities: { core: [] }
-        };
-    }
-    
-    // 确保名字存在
-    if (!enhancedData.name) enhancedData.name = `${roleInfo.name} (AI版)`;
-    
-    return enhancedData;
+    // 构造新角色数据
+    const updatedRoleData = {
+        ...rawRole,
+        ...enhancedData,
+        is_temp: true, // 标记为临时
+        is_local: false
+    };
+
+    // 更新临时列表
+    RolePartsLibrary.tempManager.upsert(updatedRoleData);
+
+    console.log(`✅ 角色生成完毕 (临时状态)`);
+    showToast('生成成功！请手动保存到仓库。', 'success');
+
+    resetFurnace();
 }
-
 
 function resetFurnace() {
     if (window.alchemyState) {
@@ -111,9 +75,8 @@ function resetFurnace() {
 }
 
 // -----------------------------------------------------------------------------
-// 2. 模拟互动逻辑
+// 2. 模拟互动逻辑 (导出)
 // -----------------------------------------------------------------------------
-
 export function simulateInteraction() {
     console.log("🎭 启动模拟互动...");
     
@@ -131,9 +94,10 @@ export function simulateInteraction() {
     createCustomRoleWindow(roleMaterial.id);
 }
 
-// 导出这个辅助函数，因为 main.js 或者 html onclick 可能会用到
+// 导出辅助函数
 export function createCustomRoleWindow(roleId) {
-    const roleName = (window.getRoleName && window.getRoleName(roleId)) || roleId;
+    // 尝试获取名称
+    const roleName = RolePartsLibrary.getRoleDetailsEnhanced(roleId)?.name || roleId;
     let panelId = `${roleId}-panel`;
     let panel = document.getElementById(panelId);
     
@@ -161,7 +125,6 @@ export function createCustomRoleWindow(roleId) {
     panel.style.display = 'flex';
 }
 
-// 导出发送消息函数
 export async function sendRoleMessage(roleId) {
     const input = document.getElementById(`${roleId}-input`);
     const chat = document.getElementById(`${roleId}-chat`);
@@ -175,7 +138,6 @@ export async function sendRoleMessage(roleId) {
     
     chat.innerHTML += `<div class="ai-msg" style="text-align:left; margin:5px; color:blue;"><b>AI:</b> (正在思考...)</div>`;
     
-    // 调用 runAgent (现在是从 workflow.js 导入的，不再是 window.runAgent)
     try {
         const response = await runAgent(roleId, text);
         chat.lastElementChild.innerHTML = `<b>AI:</b> ${response}`;
@@ -186,3 +148,74 @@ export async function sendRoleMessage(roleId) {
     chat.scrollTop = chat.scrollHeight;
 }
 
+// -----------------------------------------------------------------------------
+// 3. 真实的 AI 调用逻辑 (内部使用，无需导出)
+// -----------------------------------------------------------------------------
+async function callRealAIForEnhancement(roleInfo, modelId) {
+    const isLocal = modelId.startsWith('custom_') || modelId.includes('localhost');
+    let enhancedData = null;
+
+    if (isLocal) {
+        console.log(`🔌 使用本地模型直连...`);
+        const modelConfig = window.modelAPIConfigs ? window.modelAPIConfigs.get(modelId) : null;
+        if (!modelConfig) throw new Error("找不到本地模型配置");
+
+        const simplePrompt = `请为角色 [${roleInfo.name}] 生成JSON定义。\n要求：\n1. description: 限制30字。\n2. tags: 5个短词。\n3. 直接返回JSON。`;
+        
+        try {
+            const response = await fetch(modelConfig.endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: modelConfig.model,
+                    messages: [
+                        { role: 'system', content: "你是一个JSON生成器。" },
+                        { role: 'user', content: simplePrompt }
+                    ],
+                    stream: false,
+                    format: "json"
+                })
+            });
+
+            if (!response.ok) throw new Error(`本地模型连接失败 (${response.status})`);
+
+            const data = await response.json();
+            let content = data.message?.content || data.response;
+            if (!content) throw new Error("模型返回内容为空");
+            
+            content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            enhancedData = JSON.parse(content);
+
+        } catch (err) {
+            console.error("❌ 本地炼丹失败:", err);
+            throw err;
+        }
+    } else {
+        console.log(`🤖 请求云端炼丹...`);
+        try {
+            // 假设 api.js 已挂载 (如果没有挂载，这里会报错，请确保 window.api 存在)
+            if (window.api && window.api.alchemyAPI) {
+                enhancedData = await window.api.alchemyAPI.forge(roleInfo.name, modelId);
+            } else {
+                // 兜底模拟 (防止没有云端环境时彻底卡死)
+                console.warn("⚠️ 未找到云端 API，使用模拟数据");
+                enhancedData = {
+                    name: `${roleInfo.name} (AI版)`,
+                    description: "云端API未连接，这是模拟描述。",
+                    tags: ["模拟数据"]
+                };
+            }
+        } catch (err) {
+            console.error("云端炼丹失败:", err);
+            throw err;
+        }
+    }
+
+    if (!enhancedData || Object.keys(enhancedData).length === 0) {
+        throw new Error("AI未返回有效格式。");
+    }
+    
+    if (!enhancedData.name) enhancedData.name = `${roleInfo.name} (AI版)`;
+    
+    return enhancedData;
+}
