@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     UI.updateBindingsUI();
     
     Trash.initTrashCan();
-    Drag.initDropZone();
+    Drag.initializeDragAndDrop();
     
     // 绑定顶部按钮
     const btnMap = {
@@ -99,3 +99,4 @@ window.showRoleDetails = Modals.showRoleDetails; // 补上这一行！
 window.simulateInteraction = RoleGen.simulateInteraction;
 // 如果还有 startAIAlchemy 需要手动调用：
  window.startAIAlchemy = RoleGen.startAIAlchemy;
+
