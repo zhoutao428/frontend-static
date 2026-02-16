@@ -321,11 +321,40 @@ function handleWorkflowDrop(roleItem) {
     if (window.renderGroups) window.renderGroups();
 }
 
+// js/modules/drag-drop.js (底部)
+
+// ... 这里的代码保持不变 ...
+
+// 👇 必须加上这几行挂载代码！
+window.onRoleDragStart = function(event) {
+    // 兼容处理：如果您原来的逻辑就在这里，直接挂载即可
+    // 如果没有，这里补一个简单的逻辑
+    const target = event.target.closest('.role-card, .part-card, .model-card');
+    if (target) {
+        event.dataTransfer.setData('text/plain', JSON.stringify({
+            id: target.dataset.id || target.dataset.roleId,
+            type: target.dataset.type || 'role',
+            name: target.querySelector('.role-name, .part-name')?.innerText
+        }));
+        target.classList.add('dragging');
+    }
+};
+
+window.onDragEnd = function(event) {
+    const target = event.target.closest('.role-card, .part-card, .model-card');
+    if (target) {
+        target.classList.remove('dragging');
+    }
+};
+
+// 如果还有 onModelDragStart，也一并挂载
+window.onModelDragStart = window.onRoleDragStart; // 通常逻辑是一样的
 // -----------------------------------------------------------------------------
 // 3. 挂载到 Window (放在最后)
 // -----------------------------------------------------------------------------
 window.initializeDragAndDrop = initializeDragAndDrop;
 // 不需要挂载 handleFurnaceDrop，因为它是内部使用的
+
 
 
 
