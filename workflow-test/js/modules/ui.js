@@ -464,7 +464,35 @@ function handleTrashDelete() {
         }
     }
 }
+// 👇 补上这个缺失的函数，并导出
+export function showToast(message, type = 'info') {
+    // 简单的 Toast 实现
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.cssText = `
+        position: fixed; top: 20px; right: 20px; 
+        padding: 10px 20px; background: #333; color: #fff; 
+        border-radius: 4px; z-index: 9999; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    if (type === 'success') toast.style.background = '#10b981';
+    if (type === 'error') toast.style.background = '#ef4444';
+    
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => document.body.removeChild(toast), 300);
+    }, 3000);
+}
+
+// 别忘了挂载一下，以防其他地方用 window.showToast
+window.showToast = showToast;
 
 // 自动启动
 document.addEventListener('DOMContentLoaded', initTrashCan);
+
 
