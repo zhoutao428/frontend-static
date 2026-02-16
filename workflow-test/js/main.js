@@ -1,4 +1,5 @@
 // js/main.js
+
 import * as State from './modules/state.js';
 import * as Utils from './modules/utils.js';
 import * as UI from './modules/ui.js';
@@ -12,25 +13,33 @@ import * as Workflow from './modules/workflow.js';
 document.addEventListener('DOMContentLoaded', () => {
     Utils.log('🚀 系统启动 (模块化版)...');
     
-    State.initState();
-    State.loadAllAPIConfigs();
-    State.loadTestData();
+    // State 初始化
+    if(State.initState) State.initState();
+    if(State.loadAllAPIConfigs) State.loadAllAPIConfigs();
+    if(State.loadTestData) State.loadTestData();
     
+    // UI 渲染
     UI.renderPartsGrid();
     UI.renderAICategories();
     UI.renderGroups();
     UI.updateBindingsUI();
     
+    // 功能模块初始化
     Trash.initTrashCan();
+    
+    // 💡 关键：调用 drag-drop.js 导出的函数
     Drag.initializeDragAndDrop();
     
+    // 初始化炼丹炉状态
+    if(AlchemyCore.initializeAlchemyState) AlchemyCore.initializeAlchemyState();
+
     // 绑定顶部按钮
     const btnMap = {
         'btn-reset': State.resetAll,
         'btn-export': State.exportConfig,
-        'btn-simulate': RoleGen.simulateInteraction, // 假设模拟还在角色生成里，或者删掉
-        'btn-run-all': Workflow.executeWorkflow,     // ✅ 工作流的归 Workflow
-        'btn-stop': Workflow.stopExecution           // ✅ 停止也归 Workflow
+        'btn-simulate': RoleGen.simulateInteraction, // 确保 role_generation.js 导出了 simulateInteraction
+        'btn-run-all': Workflow.executeWorkflow,     // 确保 workflow.js 导出了 executeWorkflow
+        'btn-stop': Workflow.stopExecution           // 确保 workflow.js 导出了 stopExecution
     };
     Object.keys(btnMap).forEach(id => {
         const btn = document.getElementById(id);
@@ -53,6 +62,7 @@ function bindGlobalEvents() {
 // ==========================================
 // ⚠️ 关键：挂载到 Window 供 HTML onclick 使用
 // ==========================================
+
 // UI
 window.addNewCategory = UI.addNewCategory;
 window.toggleSearch = UI.toggleSearch;
@@ -62,6 +72,7 @@ window.addGroup = UI.addGroup;
 window.removeGroup = UI.removeGroup;
 window.updateGroupName = UI.updateGroupName;
 window.renderPartsGrid = UI.renderPartsGrid;
+
 // Modals
 window.showApiConfig = Modals.showApiConfig;
 window.showModelAPIConfig = Modals.showModelAPIConfig;
@@ -71,7 +82,8 @@ window.testApiConnection = Modals.testApiConnection;
 window.hideApiConfigModal = Modals.hideApiConfigModal;
 window.showRoleDetails = Modals.showRoleDetails;
 window.showTaskDetails = Modals.showTaskDetails;
-// Drag
+
+// Drag (从 Drag 模块挂载)
 window.onRoleDragStart = Drag.onRoleDragStart;
 window.onModelDragStart = Drag.onModelDragStart;
 window.onDragEnd = Drag.onDragEnd;
@@ -84,7 +96,8 @@ window.executeWorkflow = Workflow.executeWorkflow;
 window.stopExecution = Workflow.stopExecution;
 window.toggleResultsPanel = Workflow.toggleResultsPanel;
 window.autoOrchestrate = Workflow.autoOrchestrate;
-window.runAgent = Workflow.runAgent; // 如果 runAgent 还在 Workflow 里
+window.runAgent = Workflow.runAgent;
+
 // State
 window.resetAll = State.resetAll;
 window.exportConfig = State.exportConfig;
@@ -94,9 +107,7 @@ window.clearDebugLog = Utils.clearDebugLog;
 window.toggleDebugPanel = Utils.toggleDebugPanel;
 window.togglePinDebugPanel = Utils.togglePinDebugPanel;
 
-window.showRoleDetails = Modals.showRoleDetails; // 补上这一行！
 // Role Generation
 window.simulateInteraction = RoleGen.simulateInteraction;
-// 如果还有 startAIAlchemy 需要手动调用：
- window.startAIAlchemy = RoleGen.startAIAlchemy;
-
+// 手动挂载炼丹入口，供 drag-drop.js 调用
+window.startAIAlchemy = RoleGen.startAIAlchemy;
