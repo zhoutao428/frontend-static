@@ -1,9 +1,7 @@
 // js/modules/drag-drop.js
-import { log, getRoleName, getModelName } from './utils.js';
-import { renderGroups, updateBindingsUI, renderPartsGrid, updateApiStatus } from './ui.js';
-import { updateFurnaceDisplay, checkAlchemyReady } from './alchemy_core.js';
 
-export function initDropZone() {
+
+function initDropZone() {
     // ----------------------------------------
     // Part 1: 下面的炼丹炉 (炼制角色)
     // ----------------------------------------
@@ -88,7 +86,7 @@ export function initDropZone() {
     }
 }
 
-export function onRoleDragStart(e) {
+function onRoleDragStart(e) {
     const roleId = e.target.dataset.roleId;
     
     // 获取完整角色数据（增强版方法）
@@ -112,7 +110,7 @@ export function onRoleDragStart(e) {
 }
 
 
-export function onModelDragStart(e) {
+function onModelDragStart(e) {
     const modelId = e.target.dataset.modelId;
     
     // 直接保存ID，暂时不处理详情
@@ -125,13 +123,13 @@ export function onModelDragStart(e) {
 }
 
 
-export function onDragEnd(e) {
+function onDragEnd(e) {
     e.target.classList.remove('dragging');
     window.draggedItem = null;
     window.draggedType = null;
 }
 
-export function onGroupDragOver(e, groupIndex) {
+function onGroupDragOver(e, groupIndex) {
     e.preventDefault();
     if (!draggedItem) return;
     
@@ -143,12 +141,12 @@ export function onGroupDragOver(e, groupIndex) {
     }
 }
 
-export function onGroupDragLeave(e, groupIndex) {
+function onGroupDragLeave(e, groupIndex) {
     const group = document.querySelector(`.build-group[data-group-index="${groupIndex}"]`);
     group.classList.remove('drag-over', 'drag-over-model');
 }
 
-export function onGroupDrop(e, groupIndex) {
+function onGroupDrop(e, groupIndex) {
     e.preventDefault();
     
     const group = document.querySelector(`.build-group[data-group-index="${groupIndex}"]`);
@@ -179,10 +177,11 @@ export function onGroupDrop(e, groupIndex) {
     }
 }
 
-export function bindModelToRole(roleId, modelId) {
+function bindModelToRole(roleId, modelId) {
     bindings.set(roleId, modelId);
     updateBindingsUI();
     renderGroups();
     log(`绑定: ${roleId} → ${modelId}`);
 }
+window.initializeDragAndDrop = initializeDragAndDrop;
 
