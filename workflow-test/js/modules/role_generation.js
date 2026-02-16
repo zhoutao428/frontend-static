@@ -1,34 +1,37 @@
 // js/modules/role_generation.js
 
-// 假设 updateFurnaceDisplay 在 alchemy_core.js，且已挂载到 window
-// 假设 RolePartsLibrary 在 role-parts-library.js，且已挂载到 window
+// 1. 引入依赖 (不再假设，直接引用)
+import { updateFurnaceDisplay } from './alchemy_core.js';
+import { runAgent } from './workflow.js'; // 引入 runAgent，供 sendRoleMessage 使用
+import { RolePartsLibrary } from './role-parts-library.js';
+import { showToast } from './ui.js';
 
 // -----------------------------------------------------------------------------
 // 1. 炼丹核心逻辑
 // -----------------------------------------------------------------------------
-async function startAIAlchemy(roleMaterial, modelMaterial) {
+export async function startAIAlchemy(roleMaterial, modelMaterial) {
     if (!window.alchemyState) return;
 
     window.alchemyState.isProcessing = true;
-    if (window.updateFurnaceDisplay) window.updateFurnaceDisplay();
+    updateFurnaceDisplay(); // 调用导入的函数
 
     const roleId = roleMaterial.id; 
     const modelId = modelMaterial.id;
     
     // 获取原始数据
-    const rawRole = window.RolePartsLibrary.getRoleDetailsEnhanced(roleId);
+    // 注意：如果 role-parts-library.js 是全局脚本没 export，这里就只能用 window.RolePartsLibrary
+    const lib = window.RolePartsLibrary || RolePartsLibrary;
+    const rawRole = lib.getRoleDetailsEnhanced(roleId);
     
     if (!rawRole) {
-        if(window.showToast) window.showToast("错误：找不到角色数据", 'error');
+        showToast("错误：找不到角色数据", 'error');
         resetFurnace();
         return;
     }
 
     console.log(`🔥 开始炼丹: ${rawRole.name}`);
 
-    // 模拟 AI 处理过程 (这里应保留您原有的真实API调用，为演示暂用模拟)
-    // ⚠️ 请务必确认这里是否有真实的 callRealAIForEnhancement 函数逻辑
-    // 如果有，请粘贴进来。如果没有，这里是一个模拟版本：
+    // 模拟 AI 处理 (请替换为您真实的 API 调用)
     const enhancedData = await new Promise(resolve => setTimeout(() => resolve({
         name: `${rawRole.name} (AI版)`,
         description: `由 ${modelId} 增强的角色描述`,
@@ -38,17 +41,17 @@ async function startAIAlchemy(roleMaterial, modelMaterial) {
 
     // 构造新角色数据
     const updatedRoleData = {
-        ...rawRole, // 保留原属性
-        ...enhancedData, // 覆盖新属性
-        is_temp: true, // 👈 关键：标记为临时
-        is_local: false // 还没入库
+        ...rawRole,
+        ...enhancedData,
+        is_temp: true, // 标记为临时
+        is_local: false
     };
 
-    // 💡 核心修复：只更新临时列表，不写 LocalStorage
-    window.RolePartsLibrary.tempManager.upsert(updatedRoleData);
+    // 更新临时列表
+    lib.tempManager.upsert(updatedRoleData);
 
     console.log(`✅ 角色生成完毕 (临时状态)`);
-    if (window.showToast) window.showToast('生成成功！请手动保存到仓库。', 'success');
+    showToast('生成成功！请手动保存到仓库。', 'success');
 
     resetFurnace();
 }
@@ -59,18 +62,17 @@ function resetFurnace() {
         window.alchemyState.isProcessing = false;
     }
     setTimeout(() => {
-        if (window.updateFurnaceDisplay) window.updateFurnaceDisplay();
+        updateFurnaceDisplay();
     }, 500);
 }
 
 // -----------------------------------------------------------------------------
-// 2. 模拟互动逻辑 (补回丢失的几百行)
+// 2. 模拟互动逻辑
 // -----------------------------------------------------------------------------
 
-function simulateInteraction() {
+export function simulateInteraction() {
     console.log("🎭 启动模拟互动...");
     
-    // 检查炼丹炉是否有角色
     if (!window.alchemyState || window.alchemyState.materials.length === 0) {
         alert("请先将角色拖入炼丹炉，再点击模拟！");
         return;
@@ -82,13 +84,11 @@ function simulateInteraction() {
         return;
     }
     
-    const roleId = roleMaterial.id;
-    // 打开对话窗口
-    createCustomRoleWindow(roleId);
+    createCustomRoleWindow(roleMaterial.id);
 }
 
-// 创建并打开自定义角色的对话窗口 (如果 ui.js 里没有，这里必须补上)
-function createCustomRoleWindow(roleId) {
+// 导出这个辅助函数，因为 main.js 或者 html onclick 可能会用到
+export function createCustomRoleWindow(roleId) {
     const roleName = (window.getRoleName && window.getRoleName(roleId)) || roleId;
     let panelId = `${roleId}-panel`;
     let panel = document.getElementById(panelId);
@@ -117,8 +117,8 @@ function createCustomRoleWindow(roleId) {
     panel.style.display = 'flex';
 }
 
-// 发送消息逻辑 (必须补上)
-async function sendRoleMessage(roleId) {
+// 导出发送消息函数
+export async function sendRoleMessage(roleId) {
     const input = document.getElementById(`${roleId}-input`);
     const chat = document.getElementById(`${roleId}-chat`);
     if (!input || !chat) return;
@@ -126,36 +126,18 @@ async function sendRoleMessage(roleId) {
     const text = input.value.trim();
     if (!text) return;
     
-    // 显示用户消息
     chat.innerHTML += `<div class="user-msg" style="text-align:right; margin:5px;"><b>我:</b> ${text}</div>`;
     input.value = '';
     
-    // 模拟 AI 回复 (这里应接入真实 API)
     chat.innerHTML += `<div class="ai-msg" style="text-align:left; margin:5px; color:blue;"><b>AI:</b> (正在思考...)</div>`;
     
-    // 假设调用 runAgent
-    if (window.runAgent) {
-        try {
-            const response = await window.runAgent(roleId, text);
-            // 移除思考中，显示回复
-            chat.lastElementChild.innerHTML = `<b>AI:</b> ${response}`;
-        } catch (e) {
-            chat.lastElementChild.innerHTML = `<b>AI:</b> (出错) ${e.message}`;
-        }
-    } else {
-        // 兜底模拟
-        setTimeout(() => {
-            chat.lastElementChild.innerHTML = `<b>AI:</b> 我收到了你的消息：${text}`;
-        }, 1000);
+    // 调用 runAgent (现在是从 workflow.js 导入的，不再是 window.runAgent)
+    try {
+        const response = await runAgent(roleId, text);
+        chat.lastElementChild.innerHTML = `<b>AI:</b> ${response}`;
+    } catch (e) {
+        chat.lastElementChild.innerHTML = `<b>AI:</b> (出错) ${e.message}`;
     }
     
     chat.scrollTop = chat.scrollHeight;
 }
-
-// -----------------------------------------------------------------------------
-// 3. 挂载到 Window
-// -----------------------------------------------------------------------------
-window.startAIAlchemy = startAIAlchemy;
-window.simulateInteraction = simulateInteraction;
-window.createCustomRoleWindow = createCustomRoleWindow;
-window.sendRoleMessage = sendRoleMessage;
