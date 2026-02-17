@@ -2,7 +2,7 @@
 import { log, getRoleName, getModelName } from './utils.js';
 import { chatAPI } from '../api.js';
 import { renderGroups } from './ui.js';
-
+import { alchemyAPI } from '../api.js';  // 添加这一行
 /**
  * 执行完整工作流
  */
@@ -147,19 +147,19 @@ export async function autoOrchestrate(passedModelId) {
     try {
         const plannerModelCode = passedModelId || 'deepseek-chat';
 
-        const res = await fetch('http://localhost:3001/api/alchemy/orchestrate', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                goal: goal,
-                availableRoles: allRolesOnStage.map(r => ({
-                    id: r.id,
-                    name: r.name,
-                    desc: r.description || r.tags.join(',')
-                })),
-                modelId: plannerModelCode
-            })
-        });
+        // 替换原来的 fetch 代码
+const res = await alchemyAPI.orchestrate({
+    goal: goal,
+    availableRoles: allRolesOnStage.map(r => ({
+        id: r.id,
+        name: r.name,
+        desc: r.description || r.tags.join(',')
+    })),
+    modelId: plannerModelCode
+});
+
+// 直接使用 res，因为 alchemyAPI 已经返回解析后的 JSON
+const plan = res;
 
         if (!res.ok) {
             const err = await res.json();
@@ -336,3 +336,4 @@ window.quickAction = async function(roleId, promptTemplate) {
         alert(`【技能预览】\n\n角色ID: ${roleId}\n指令模板: ${promptTemplate}\n\n(请在 Workbench 主页中使用此功能以执行)`);
     }
 };
+
