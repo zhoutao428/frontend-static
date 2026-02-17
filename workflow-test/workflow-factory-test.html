@@ -10,15 +10,12 @@
 <body>
     <!-- 顶部控制栏 -->
     <header class="test-header">
-        <h1><i class="fas fa-flask"></i> 工作流工厂测试版</h1>
+        <h1><i class="fas fa-flask"></i> 职业研究所</h1>
         <div class="test-controls">
-            <button id="btn-reset">重置</button>
             <button id="btn-export">导出配置</button>
-            <button id="btn-simulate">模拟数据</button>
-            <button id="btn-back" onclick="window.location.href='https://0o0o0.shop/index.html'">返回主系统</button>
+            <button id="btn-back" onclick="window.location.href='https://0o0o0.shop/warehouse.html'">角色仓库</button>
         </div>
     </header>
-    const API_BASE = 'https://public-virid-chi.vercel.app';
     <!-- 三栏主容器 -->
     <div class="factory-container">
         <!-- 左侧：角色零件库 -->
@@ -40,11 +37,8 @@
       <!-- 中间：工作流组装台 -->
 <main class="panel builder-panel">
     <div class="panel-header">
-        <h3><i class="fas fa-drafting-compass"></i> 工作流组装台</h3>
+        <h3><i class="fas fa-drafting-compass"></i> 角色工作流</h3>
         <div class="workflow-tools">
-            <button id="btn-auto-orchestrate" class="btn-primary-glow">
-                <i class="fas fa-magic"></i> AI 自动编排
-            </button>  
             <button id="btn-add-group" title="新建分组">
                 <i class="fas fa-plus"></i>
             </button>
@@ -193,32 +187,6 @@
         </div>
     </div>
 </div>
-     <!-- 运行控制面板 -->
-<div class="run-control-panel">
-    <div class="run-controls">
-        <button id="btn-run-all" class="btn-run-primary">
-            <i class="fas fa-play-circle"></i> 运行全部
-        </button>
-        <button id="btn-run-group" class="btn-run-secondary">
-            <i class="fas fa-play"></i> 运行选中组
-        </button>
-        <button id="btn-run-step" class="btn-run-secondary">
-            <i class="fas fa-step-forward"></i> 单步执行
-        </button>
-        <button id="btn-stop" class="btn-run-stop" disabled>
-            <i class="fas fa-stop"></i> 停止
-        </button>
-        
-        <div class="run-status">
-            <span id="run-status-text">就绪</span>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <span id="progress-text">0%</span>
-        </div>
-    </div>
-</div>
-
 <!-- 执行结果面板 -->
 <div class="results-panel" id="results-panel">
     <div class="results-header">
@@ -231,7 +199,7 @@
         <!-- 执行结果将动态显示在这里 -->
     </div>
 </div>
-     <!<!-- 1. 引入 SDK -->
+     <!-- 1. 引入 SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- 2. 初始化 Supabase (这一步必须在 api.js 之前！) -->
@@ -269,6 +237,7 @@
 </body>
 
 </html>
+
 
 
 
