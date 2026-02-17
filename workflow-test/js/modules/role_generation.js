@@ -1,7 +1,7 @@
 // js/modules/role_generation.js
 import { log, getRoleName, getModelName } from './utils.js';
 import { renderPartsGrid, renderGroups } from './ui.js';
-import { callRealAIForEnhancement, resetFurnace, updateFurnaceDisplay } from './alchemy_core.js';
+import { callRealAIForEnhancement, resetFurnace, updateFurnaceDisplay, saveToLocal  } from './alchemy_core.js';
 
 /**
  * 启动AI炼丹主流程
@@ -231,3 +231,4 @@ export function simulateInteraction() {
         }
     }, 2000);
 }
+
