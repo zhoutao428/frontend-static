@@ -1,48 +1,52 @@
 // js/modules/role_generation.js
+import { log, getRoleName, getModelName } from './utils.js';
+import { renderPartsGrid, renderGroups } from './ui.js';
+import { callRealAIForEnhancement, resetFurnace, updateFurnaceDisplay } from './alchemy_core.js';
 
-import { updateFurnaceDisplay } from './alchemy_core.js';
-import { runAgent } from './workflow.js';
-import { RolePartsLibrary } from './role-parts-library.js';
-import { showToast } from './ui.js';
+/**
+ * 启动AI炼丹主流程
+ */
+export async function startAIAlchemy(roleItem, modelItem) {
+    console.log('炼丹参数:', { roleItem, modelItem });
 
-// -----------------------------------------------------------------------------
-// 1. 炼丹核心逻辑
-// -----------------------------------------------------------------------------
-export async function startAIAlchemy(roleMaterial, modelMaterial) {
-    if (!window.alchemyState) return;
-
-    window.alchemyState.isProcessing = true;
-    updateFurnaceDisplay();
-
-    const roleId = roleMaterial.id; 
-    const modelId = modelMaterial.id;
+    let roleId = roleItem;
+    if (typeof roleId === 'object') roleId = roleId.id || roleId.data?.id || roleItem.dataset?.id;
     
-        // 获取原始数据
-    const lib = window.RolePartsLibrary || RolePartsLibrary;
+    let modelId = modelItem;
+    if (typeof modelId === 'object') modelId = modelId.id || modelId.data?.id || modelItem.dataset?.id;
+
+    const getSafeName = (item) => {
+        if (!item) return "未知";
+        if (typeof item === 'string') return "未知";
+        return item.name || item.querySelector?.('.part-name')?.innerText.trim() || "未知";
+    };
     
-    // 1. 先尝试标准方法
-    let rawRole = lib.getRoleDetailsEnhanced(roleId);
-    
-    // 2. 如果没找到，且ID是用户创建的 (user_开头)，尝试去本地仓库里硬找
-    if (!rawRole && typeof roleId === 'string' && roleId.startsWith('user_')) {
-        console.log(`🔍 标准查找失败，尝试在 userParts 中查找 ID: ${roleId}`);
-        if (lib.userParts && lib.userParts.find) {
-            rawRole = lib.userParts.find(roleId);
-        } else if (lib.userParts && lib.userParts.getAll) {
-            // 如果没有 find 方法，手动遍历
-            const all = lib.userParts.getAll();
-            rawRole = all.find(p => p.id === roleId);
+    const roleName = window.getRoleName ? window.getRoleName(roleId) : getSafeName(roleItem);
+    const modelName = window.getModelName ? window.getModelName(modelId) : getSafeName(modelItem);
+
+    log(`🔥 检查炼丹条件: ${roleName} + ${modelName}`);
+
+    const isCloudModel = typeof modelId === 'string' && !modelId.startsWith('custom_');
+    const modelConfig = window.modelAPIConfigs ? window.modelAPIConfigs.get(modelId) : null;
+
+    if (!isCloudModel && (!modelConfig || !modelConfig.endpoint)) {
+        log(`❌ 失败：模型 [${modelName}] 未配置API地址`);
+        alert(`请先为 [${modelName}] 配置API地址`);
+        if (window.alchemyState) {
+            window.alchemyState.materials = [];
+            window.alchemyState.isProcessing = false;
         }
+        if (window.updateFurnaceDisplay) updateFurnaceDisplay();
+        return;
     }
-    // ---------------------------------------------------------
-    // 🎬 动画启动 (采用您提供的兼容逻辑)
-    // ---------------------------------------------------------
+
+    log(`✅ 炼丹条件满足，开始炼制...`);
+
     if (window.AlchemyAnimation) {
         try {
-            const roleData = { name: rawRole.name, icon: rawRole.icon || 'fa-user' };
-            const modelData = { name: modelId, id: modelId }; // 暂用ID作为名称
-
-            // 自动识别方法名：先试 Manager 版的 startAlchemy，再试 Object 版的 start
+            const roleData = { name: roleName, icon: 'fa-user' };
+            const modelData = { name: modelName, id: modelId };
+            
             if (typeof window.AlchemyAnimation.startAlchemy === 'function') {
                 window.AlchemyAnimation.startAlchemy(roleData, modelData);
             } else if (typeof window.AlchemyAnimation.start === 'function') {
@@ -53,135 +57,177 @@ export async function startAIAlchemy(roleMaterial, modelMaterial) {
         }
     }
 
+    if (window.alchemyState) window.alchemyState.isProcessing = true;
+    if (window.updateFurnaceDisplay) updateFurnaceDisplay();
+
     try {
-        console.log(`🤖 请求云端炼丹 (使用后台配方)...`);
-        
-        // 调用后台 API
+        let rawRole = null;
+
+        if (window.RolePartsLibrary && typeof RolePartsLibrary.getRoleDetailsEnhanced === 'function') {
+            try { rawRole = RolePartsLibrary.getRoleDetailsEnhanced(roleId); } catch(e){}
+        }
+
+        if (!rawRole && typeof roleId === 'string' && roleId.startsWith('user_')) {
+            if (window.RolePartsLibrary && window.RolePartsLibrary.userParts && typeof window.RolePartsLibrary.userParts.find === 'function') {
+                rawRole = RolePartsLibrary.userParts.find(roleId);
+            }
+        }
+
+        if (!rawRole) {
+            rawRole = { name: roleName, id: roleId, tags: [], description: "", icon: "fa-user" };
+        }
+
+        log(`🤖 调用AI API进行角色增强...`);
         const enhancedData = await callRealAIForEnhancement(rawRole, modelId);
         
         if (!enhancedData) throw new Error("AI未返回有效数据");
+        console.log("【调试】AI返回的数据:", enhancedData);
 
-        // 构造新角色数据
-        const updatedRoleData = {
-            ...rawRole,
-            ...enhancedData,
-            is_temp: true, // 标记为临时
-            is_local: false
+        const newRoleName = enhancedData.name || `${roleName} (增强版)`;
+        const newRole = {
+            name: newRoleName,
+            description: enhancedData.description || `由 ${modelName} 增强`,
+            icon: rawRole.icon || 'fa-robot',
+            bg_class: 'role-ai',
+            expertise: enhancedData.tags || enhancedData.expertise || [],
+            prompt_template: enhancedData.prompt || enhancedData.system_prompt || "",
+            actions: enhancedData.actions || [],
+            capabilities: enhancedData.capabilities || { core: [] },
+            role_type: 'user',
+            is_deletable: true,
+            created_at: new Date().toISOString()
         };
+        
+        let userEmail = '';
+        let token = '';
+        if (window.supabase) {
+            const { data } = await window.supabase.auth.getSession();
+            userEmail = data.session?.user?.email;
+            token = data.session?.access_token;
+        }
 
-        // 更新临时列表
-        lib.tempManager.upsert(updatedRoleData);
+        console.log(`👤 结算身份: ${userEmail}`);
 
-        console.log(`✅ 角色生成完毕 (临时状态)`);
+        if (userEmail === 'z17756037070@gmail.com') {
+            if (confirm(`👑 管理员操作\n\n是否发布到官方云端仓库？\n(取消则存入本地)`)) {
+                try {
+                    const cloudRole = { ...newRole, role_type: 'system', is_deletable: false };
+                    
+                    const res = await fetch(`${API_BASE}/api/roles`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(cloudRole)
+                    });
+                    
+                    if (!res.ok) throw new Error("云端上传失败");
+                    const savedRole = await res.json();
+                    showToast(`🎉 [官方] 角色已发布！`);
+                } catch(e) {
+                    alert("发布失败: " + e.message);
+                    saveToLocal(newRole);
+                }
+            } else {
+                saveToLocal(newRole);
+            }
+        } else {
+            saveToLocal(newRole);
+        }
 
-        // 🎬 动画结束 (同样做兼容处理)
+        log(`✅ 炼丹成功！新角色 [${newRoleName}] 已生成`);
+
         if (window.AlchemyAnimation && window.AlchemyAnimation.finish) {
             window.AlchemyAnimation.finish();
         }
-        
-        showToast('✨ 炼丹成功！新角色已生成 (临时)', 'success');
 
-    } catch (err) {
-        console.error("炼丹失败:", err);
-        showToast(`❌ 炼丹失败: ${err.message}`, 'error');
+        setTimeout(() => {
+            if (window.alchemyState) {
+                window.alchemyState.materials = [];
+                window.alchemyState.isProcessing = false;
+                if(window.updateFurnaceDisplay) updateFurnaceDisplay();
+            }
+        }, 2000);
+
+    } catch (error) {
+        console.error(error);
+        log(`❌ 炼丹失败: ${error.message}`);
         
-        // 🎬 动画报错
         if (window.AlchemyAnimation && window.AlchemyAnimation.showError) {
-            window.AlchemyAnimation.showError(err.message);
+            window.AlchemyAnimation.showError(error.message);
         }
-    } finally {
-        setTimeout(resetFurnace, 1500);
+        
+        if (window.alchemyState) {
+            window.alchemyState.materials = [];
+            window.alchemyState.isProcessing = false;
+            if(window.updateFurnaceDisplay) updateFurnaceDisplay();
+        }
     }
 }
 
-function resetFurnace() {
-    if (window.alchemyState) {
-        window.alchemyState.materials = [];
-        window.alchemyState.isProcessing = false;
-    }
-    updateFurnaceDisplay();
+/**
+ * 发送角色消息
+ */
+export function sendRoleMessage(roleId, message) {
+    console.log(`💬 发送消息给 ${roleId}:`, message);
+    // 实际发送逻辑
 }
 
-// -----------------------------------------------------------------------------
-// 2. 模拟互动逻辑 (保持不变)
-// -----------------------------------------------------------------------------
-export function simulateInteraction() {
-    console.log("🎭 启动模拟互动...");
-    if (!window.alchemyState || window.alchemyState.materials.length === 0) {
-        alert("请先将角色拖入炼丹炉，再点击模拟！");
-        return;
-    }
-    const roleMaterial = window.alchemyState.materials.find(m => m.type === 'role');
-    if(roleMaterial) createCustomRoleWindow(roleMaterial.id);
-}
-
+/**
+ * 创建自定义角色窗口
+ */
 export function createCustomRoleWindow(roleId) {
-    const roleName = (window.getRoleName && window.getRoleName(roleId)) || roleId;
-    let panelId = `${roleId}-panel`;
-    let panel = document.getElementById(panelId);
-    if (!panel) {
-        panel = document.createElement('div');
-        panel.id = panelId;
-        panel.className = 'modal custom-role-window';
-        panel.style.display = 'none';
-        panel.innerHTML = `
-            <div class="modal-content" style="max-width: 600px; padding: 20px;">
-                <span class="modal-close" onclick="document.getElementById('${panelId}').style.display='none'" style="float: right; cursor: pointer;">&times;</span>
-                <h3>💬 ${roleName}</h3>
-                <div class="chat-container" id="${roleId}-chat" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px;"></div>
-                <div class="input-area" style="display: flex; gap: 10px;">
-                    <textarea id="${roleId}-input" placeholder="输入内容..." style="flex: 1; height: 60px;"></textarea>
-                    <button onclick="window.sendRoleMessage('${roleId}')">发送</button>
-                </div>
-            </div>`;
-        document.body.appendChild(panel);
-    }
-    panel.style.display = 'flex';
+    console.log(`🪟 创建角色窗口: ${roleId}`);
+    // 窗口创建逻辑
 }
 
-export async function sendRoleMessage(roleId) {
-    const input = document.getElementById(`${roleId}-input`);
-    const chat = document.getElementById(`${roleId}-chat`);
-    if (!input || !chat) return;
-    const text = input.value.trim();
-    if (!text) return;
+/**
+ * 模拟交互（用于演示）
+ */
+export function simulateInteraction() {
+    log('开始模拟交互...');
     
-    chat.innerHTML += `<div class="user-msg" style="text-align:right; margin:5px;"><b>我:</b> ${text}</div>`;
-    input.value = '';
-    chat.innerHTML += `<div class="ai-msg" style="text-align:left; margin:5px; color:blue;"><b>AI:</b> (正在思考...)</div>`;
+    setTimeout(() => {
+        if (window.builderData && window.builderData[0]) {
+            window.builderData[0].roles.push('frontend_expert');
+            window.builderData[0].roles.push('data_analyst');
+            if (typeof renderGroups === 'function') renderGroups();
+            log('模拟：添加了2个角色到分组');
+        }
+    }, 500);
     
-    try {
-        const response = await runAgent(roleId, text);
-        chat.lastElementChild.innerHTML = `<b>AI:</b> ${response}`;
-    } catch (e) {
-        chat.lastElementChild.innerHTML = `<b>AI:</b> (出错) ${e.message}`;
-    }
-    chat.scrollTop = chat.scrollHeight;
+    setTimeout(() => {
+        if (typeof window.bindModelToRole === 'function') {
+            window.bindModelToRole('frontend_expert', 'deepseek-chat');
+            window.bindModelToRole('data_analyst', 'gpt4');
+        }
+        log('模拟：绑定了2个模型');
+    }, 1000);
+    
+    setTimeout(() => {
+        if (typeof window.addGroup === 'function') {
+            window.addGroup();
+        }
+        log('模拟：添加了新分组');
+    }, 1500);
+    
+    setTimeout(() => {
+        if (!window.apiConfigs || !window.apiConfigs.has('ui_designer')) {
+            const uiConfig = {
+                type: 'openai',
+                endpoint: 'https://api.openai.com/v1/chat/completions',
+                model: 'gpt-4',
+                temperature: 0.9,
+                systemPrompt: '你是一个专业的UI设计师，擅长Figma和Sketch等设计工具。'
+            };
+            if (window.apiConfigs) {
+                window.apiConfigs.set('ui_designer', uiConfig);
+                if (typeof window.updateApiStatus === 'function') {
+                    window.updateApiStatus('ui_designer');
+                }
+            }
+            log('模拟：为UI设计师配置了API');
+        }
+    }, 2000);
 }
-
-// -----------------------------------------------------------------------------
-// 3. 真实的 AI 调用逻辑 (只调后台)
-// -----------------------------------------------------------------------------
-async function callRealAIForEnhancement(roleInfo, modelId) {
-    console.log(`🤖 请求云端炼丹 (使用后台配方)...`);
-    
-    // 优先使用封装好的 api.js
-    if (window.api && window.api.alchemyAPI) {
-        return await window.api.alchemyAPI.forge(roleInfo.name, modelId);
-    }
-    
-    // 兜底 fetch
-    const apiUrl = 'https://public-virid-chi.vercel.app/api/alchemy/forge'; 
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role_name: roleInfo.name, model_id: modelId })
-    });
-
-    if (!response.ok) throw new Error(`后台服务错误: ${response.status}`);
-    const data = await response.json();
-    
-    if (!data.name) data.name = `${roleInfo.name} (AI版)`;
-    return data;
-}
-
