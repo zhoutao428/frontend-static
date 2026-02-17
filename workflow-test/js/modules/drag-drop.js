@@ -133,8 +133,16 @@ export function onRoleDragStart(e) {
     }
     
     if (!window.draggedItem) {
-        window.draggedItem = roleData || { id: roleId, name: '未知角色' };
+    if (roleData) {
+        window.draggedItem = roleData;
+    } else {
+        // 尝试直接从 RolePartsLibrary 获取
+        const basicRole = RolePartsLibrary?.getRoleDetails?.(roleId) || 
+                          RolePartsLibrary?.userParts?.find?.(roleId) ||
+                          { id: roleId, name: getRoleName(roleId) || '未知角色' };
+        window.draggedItem = basicRole;
     }
+}
     
     window.draggedType = 'role';
     e.target.classList.add('dragging');
@@ -230,3 +238,4 @@ export function onGroupDrop(e, groupIndex) {
         log(`模型 ${getModelName(itemId)} 已绑定到整组`);
     }
 }
+
