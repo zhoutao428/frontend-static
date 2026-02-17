@@ -222,7 +222,7 @@ function showToast(msg, type='info') {
 /**
  * 保存角色到本地
  */
-function saveToLocal(role) {
+export function saveToLocal(role) {
     role.id = `local_${Date.now()}`;
     role.is_local = true;
     
@@ -258,12 +258,4 @@ function saveToLocal(role) {
     
     showToast(`✅ 角色 [${role.name}] 已存入本地`);
 }
-// js/modules/alchemy_core.js 底部
-export {
-    updateFurnaceDisplay,
-    checkAlchemyReady,
-    initializeAlchemyState,
-    resetFurnace,
-    callRealAIForEnhancement,
-    saveToLocal  // 添加导出
-};
+
