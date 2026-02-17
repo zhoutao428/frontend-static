@@ -159,15 +159,6 @@ const planData = await alchemyAPI.orchestrate({
 });
 
 applyPlanToUI(planData);
-
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || `服务器错误 ${res.status}`);
-        }
-
-        const plan = await res.json();
-        
-        applyPlanToUI(plan);
         
         log(`✅ 战略规划完成！项目：${plan.workflow_name}`);
 
@@ -335,5 +326,6 @@ window.quickAction = async function(roleId, promptTemplate) {
         alert(`【技能预览】\n\n角色ID: ${roleId}\n指令模板: ${promptTemplate}\n\n(请在 Workbench 主页中使用此功能以执行)`);
     }
 };
+
 
 
