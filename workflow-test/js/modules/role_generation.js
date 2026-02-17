@@ -147,7 +147,7 @@ export async function startAIAlchemy(roleItem, modelItem) {
             if (window.alchemyState) {
                 window.alchemyState.materials = [];
                 window.alchemyState.isProcessing = false;
-                if(window.updateFurnaceDisplay) updateFurnaceDisplay();
+                if(window.updateFurnaceDisplay) window.updateFurnaceDisplay();
             }
         }, 2000);
 
@@ -162,7 +162,7 @@ export async function startAIAlchemy(roleItem, modelItem) {
         if (window.alchemyState) {
             window.alchemyState.materials = [];
             window.alchemyState.isProcessing = false;
-            if(window.updateFurnaceDisplay) updateFurnaceDisplay();
+            if(window.updateFurnaceDisplay) window.updateFurnaceDisplay();
         }
     }
 }
@@ -232,5 +232,6 @@ export function simulateInteraction() {
         }
     }, 2000);
 }
+
 
 
