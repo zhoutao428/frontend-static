@@ -136,7 +136,17 @@ export async function startAIAlchemy(roleItem, modelItem) {
         } else {
             saveToLocal(newRole);
         }
-
+        if (rawRole && rawRole.id && rawRole.id.startsWith('local_')) {
+    // 从 localStorage 中删除
+    let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
+    localRoles = localRoles.filter(r => r.id !== rawRole.id);
+    localStorage.setItem('user_templates', JSON.stringify(localRoles));
+    
+    // 从内存中删除
+    if (window.RolePartsLibrary?.userParts?.delete) {
+        window.RolePartsLibrary.userParts.delete(rawRole.id);
+    }
+}
         log(`✅ 炼丹成功！新角色 [${newRoleName}] 已生成`);
 
         if (window.AlchemyAnimation && window.AlchemyAnimation.finish) {
@@ -232,6 +242,7 @@ export function simulateInteraction() {
         }
     }, 2000);
 }
+
 
 
 
