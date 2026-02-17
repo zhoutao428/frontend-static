@@ -136,16 +136,25 @@ export async function startAIAlchemy(roleItem, modelItem) {
         } else {
             saveToLocal(newRole);
         }
-        if (rawRole && rawRole.id && rawRole.id.startsWith('local_')) {
-    // 从 localStorage 中删除
+        // 删除旧的"待定义"角色（无论它在哪里）
+if (rawRole && rawRole.id) {
+    // 1. 从 localStorage 删除
     let localRoles = JSON.parse(localStorage.getItem('user_templates') || '[]');
     localRoles = localRoles.filter(r => r.id !== rawRole.id);
     localStorage.setItem('user_templates', JSON.stringify(localRoles));
     
-    // 从内存中删除
+    // 2. 从 userParts 内存删除
     if (window.RolePartsLibrary?.userParts?.delete) {
         window.RolePartsLibrary.userParts.delete(rawRole.id);
     }
+    
+    // 3. 从 tempParts 临时区删除（关键！）
+    if (window.RolePartsLibrary?.tempParts) {
+        window.RolePartsLibrary.tempParts = window.RolePartsLibrary.tempParts.filter(p => p.id !== rawRole.id);
+    }
+    
+    // 4. 强制刷新UI
+    if (window.renderPartsGrid) window.renderPartsGrid();
 }
         log(`✅ 炼丹成功！新角色 [${newRoleName}] 已生成`);
 
@@ -242,6 +251,7 @@ export function simulateInteraction() {
         }
     }, 2000);
 }
+
 
 
 
