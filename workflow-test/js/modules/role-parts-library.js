@@ -62,12 +62,11 @@ export const RolePartsLibrary = {
 
         create: function(roleData) {
     // 生成唯一ID
-    const newId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const newId = `user_${Date.now()}`;
     
     const newRole = { 
         ...roleData, 
-        id: newId,  // 添加ID
-        category: 'custom'  // 确保category正确
+        id: newId
     };
     delete newRole.is_temp;
     newRole.is_local = true;
@@ -75,6 +74,7 @@ export const RolePartsLibrary = {
     const parts = this.getAll();
     parts.unshift(newRole);
     localStorage.setItem(this.key, JSON.stringify(parts));
+    
     return newId;  // 返回新ID
 },
 
@@ -99,5 +99,6 @@ export const RolePartsLibrary = {
 
 // ⚠️ 关键：手动挂载到全局，因为没有 export
 window.RolePartsLibrary = RolePartsLibrary;
+
 
 
