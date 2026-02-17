@@ -425,21 +425,6 @@ body {
 
 /* 工具类 */
 .hidden { display: none !important; }
-/* === 运行控制面板 (底部固定) === */
-.run-control-panel {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: rgba(15, 23, 42, 0.95);
-    border-top: 1px solid rgba(16, 185, 129, 0.3);
-    padding: 0 20px;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
 
 .run-controls {
     display: flex;
@@ -577,4 +562,5 @@ body {
     border: 2px dashed #fbbf24;
     transition: all 0.3s;
 }
+
 
