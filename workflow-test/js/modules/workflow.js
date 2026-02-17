@@ -160,8 +160,7 @@ const planData = await alchemyAPI.orchestrate({
 
 applyPlanToUI(planData);
         
-        log(`✅ 战略规划完成！项目：${plan.workflow_name}`);
-
+        log(`✅ 战略规划完成！项目：${planData.workflow_name}`);
     } catch (e) {
         console.error(e);
         alert(`编排失败: ${e.message}\n请检查后台是否上架了策划模型 (gpt-4o / deepseek-chat)`);
@@ -326,6 +325,7 @@ window.quickAction = async function(roleId, promptTemplate) {
         alert(`【技能预览】\n\n角色ID: ${roleId}\n指令模板: ${promptTemplate}\n\n(请在 Workbench 主页中使用此功能以执行)`);
     }
 };
+
 
 
 
