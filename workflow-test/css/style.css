@@ -57,7 +57,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: stretch; /* 确保子元素高度拉伸 */
-    height: calc(100vh - 60px - 60px); 
+    height: calc(100vh - 60px);
     margin-top: 60px;
     overflow: hidden;
 }
@@ -562,5 +562,6 @@ body {
     border: 2px dashed #fbbf24;
     transition: all 0.3s;
 }
+
 
 
