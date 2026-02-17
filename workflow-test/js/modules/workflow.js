@@ -94,9 +94,11 @@ export async function executeWorkflow() {
     document.getElementById('run-status-text').textContent = '执行完成';
     document.getElementById('btn-run-all').disabled = false;
     
-    if (confirm("执行完毕！是否保存此工作流到首页？")) {
-        saveWorkflowToHomepage();
-    }
+    if (confirm("执行完毕！是否保存此工作流到仓库？")) {
+    saveWorkflowToWarehouse();
+    alert("✅ 已保存到仓库！");
+    window.location.href = 'index.html';  // 或者跳转到仓库页面
+}
 }
 
 /**
@@ -325,6 +327,7 @@ window.quickAction = async function(roleId, promptTemplate) {
         alert(`【技能预览】\n\n角色ID: ${roleId}\n指令模板: ${promptTemplate}\n\n(请在 Workbench 主页中使用此功能以执行)`);
     }
 };
+
 
 
 
