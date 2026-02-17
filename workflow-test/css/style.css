@@ -108,6 +108,7 @@ body {
 .library-panel {
     width: 30%;
     border-right: 1px solid rgba(99, 102, 241, 0.2);
+    height: 100%;
 }
 
 /* 分类树 */
@@ -339,6 +340,7 @@ body {
 .ai-panel {
     width: 30%;
     border-left: 1px solid rgba(99, 102, 241, 0.2);
+    height: 100%;
 }
 
 .ai-categories {
@@ -575,3 +577,4 @@ body {
     border: 2px dashed #fbbf24;
     transition: all 0.3s;
 }
+
