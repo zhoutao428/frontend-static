@@ -61,20 +61,22 @@ export const RolePartsLibrary = {
         key: 'user_templates',
 
         create: function(roleData) {
-            // 💡 真正的入库操作
-            const newRole = { ...roleData };
-            delete newRole.is_temp; // 去掉临时标记
-            newRole.is_local = true;
+    // 生成唯一ID
+    const newId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const newRole = { 
+        ...roleData, 
+        id: newId,  // 添加ID
+        category: 'custom'  // 确保category正确
+    };
+    delete newRole.is_temp;
+    newRole.is_local = true;
 
-            const parts = this.getAll();
-            // 防止重复
-            if (!parts.find(p => p.id === newRole.id)) {
-                parts.unshift(newRole);
-                localStorage.setItem(this.key, JSON.stringify(parts));
-                return true;
-            }
-            return false;
-        },
+    const parts = this.getAll();
+    parts.unshift(newRole);
+    localStorage.setItem(this.key, JSON.stringify(parts));
+    return newId;  // 返回新ID
+},
 
         delete: function(partId) {
             let parts = this.getAll();
@@ -97,4 +99,5 @@ export const RolePartsLibrary = {
 
 // ⚠️ 关键：手动挂载到全局，因为没有 export
 window.RolePartsLibrary = RolePartsLibrary;
+
 
