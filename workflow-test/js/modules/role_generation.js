@@ -89,6 +89,7 @@ export async function startAIAlchemy(roleItem, modelItem) {
             description: enhancedData.description || `由 ${modelName} 增强`,
             icon: rawRole.icon || 'fa-robot',
             bg_class: 'role-ai',
+            color: rawRole.color || '#94a3b8',
             expertise: enhancedData.tags || enhancedData.expertise || [],
             prompt_template: enhancedData.prompt || enhancedData.system_prompt || "",
             actions: enhancedData.actions || [],
@@ -231,4 +232,5 @@ export function simulateInteraction() {
         }
     }, 2000);
 }
+
 
