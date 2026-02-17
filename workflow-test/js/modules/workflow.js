@@ -148,7 +148,7 @@ export async function autoOrchestrate(passedModelId) {
         const plannerModelCode = passedModelId || 'deepseek-chat';
 
         // 替换原来的 fetch 代码
-const res = await alchemyAPI.orchestrate({
+const planData = await alchemyAPI.orchestrate({
     goal: goal,
     availableRoles: allRolesOnStage.map(r => ({
         id: r.id,
@@ -158,8 +158,7 @@ const res = await alchemyAPI.orchestrate({
     modelId: plannerModelCode
 });
 
-// 直接使用 res，因为 alchemyAPI 已经返回解析后的 JSON
-const plan = res;
+applyPlanToUI(planData);
 
         if (!res.ok) {
             const err = await res.json();
@@ -336,4 +335,5 @@ window.quickAction = async function(roleId, promptTemplate) {
         alert(`【技能预览】\n\n角色ID: ${roleId}\n指令模板: ${promptTemplate}\n\n(请在 Workbench 主页中使用此功能以执行)`);
     }
 };
+
 
