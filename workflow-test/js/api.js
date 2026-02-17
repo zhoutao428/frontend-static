@@ -154,6 +154,9 @@ export const get = (endpoint) => {
 // ==========================================
 // 4. 炼丹专用 API (新增)
 // ==========================================
+// ==========================================
+// 4. 炼丹专用 API (新增)
+// ==========================================
 export const alchemyAPI = {
     /**
      * 调用后台炼丹炉
@@ -163,6 +166,15 @@ export const alchemyAPI = {
     forge: (roleName, modelId) => fetchAI('/alchemy', {
         method: 'POST',
         body: JSON.stringify({ roleName, modelId })
+    }),
+    
+    /**
+     * 调用后台自动编排
+     * @param {object} data - 编排数据 { goal, availableRoles, modelId }
+     */
+    orchestrate: (data) => fetchAI('/alchemy/orchestrate', {
+        method: 'POST',
+        body: JSON.stringify(data)
     })
 };
 
@@ -170,6 +182,7 @@ export default {
     projectAPI, roleAPI, localAPI, chatAPI, systemAPI, workflowAPI,alchemyAPI,
     post, get
 };
+
 
 
 
